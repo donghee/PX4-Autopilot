@@ -44,6 +44,14 @@
 /* Max measurement rate is 25Hz */
 #define LPS22HB_CONVERSION_INTERVAL	(1000000 / 25)	/* microseconds */
 
+template<typename T>
+static void getTwosComplement(T &raw, uint8_t length)
+{
+	if (raw & ((T)1 << (length - 1))) {
+		raw -= (T)1 << length;
+	}
+}
+
 LPS22HB::LPS22HB(device::Device *interface, const char *path) :
 	CDev(path),
 	_interface(interface),
@@ -290,13 +298,14 @@ LPS22HB::collect()
 	}
 
 	// To obtain the pressure in hPa, take the two’s complement of the complete word and then divide by 4096 LSB/hPa.
-	uint32_t P = report.PRESS_OUT_XL + (report.PRESS_OUT_L << 8) + (report.PRESS_OUT_H << 16);
-
-	uint32_t TEMP_OUT = report.TEMP_OUT_L + (report.TEMP_OUT_H << 8);
-
+	int32_t P = (int32_t) report.PRESS_OUT_XL | (report.PRESS_OUT_L << 8) | (report.PRESS_OUT_H << 16);
+	getTwosComplement(P, 24);
 	/* Pressure and MSL in mBar */
 	new_report.pressure = P / 4096.0f;
-	new_report.temperature = 42.5f + (TEMP_OUT / 480.0f);
+	
+	uint16_t TEMP_OUT = (int16_t)report.TEMP_OUT_L | (report.TEMP_OUT_H << 8);
+	//	new_report.temperature = 42.5f + (TEMP_OUT / 480.0f);
+	new_report.temperature = TEMP_OUT / 100.0f;
 
 	/* get device ID */
 	new_report.device_id = _interface->get_device_id();
