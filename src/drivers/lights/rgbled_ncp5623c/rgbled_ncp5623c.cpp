@@ -243,7 +243,8 @@ RGBLED_NPC5623C::led()
 	if (_led_controller.update(led_control_data) == 1) {
 		switch (led_control_data.leds[0].color) {
 		case led_control_s::COLOR_RED:
-			_r = NCP5623_LED_BRIGHT; _g = 0; _b = 0;
+			//_r = NCP5623_LED_BRIGHT; _g = 0; _b = 0;
+			_r = 0; _g = 0; _b = NCP5623_LED_BRIGHT;
 			break;
 
 		case led_control_s::COLOR_GREEN:
@@ -251,12 +252,14 @@ RGBLED_NPC5623C::led()
 			break;
 
 		case led_control_s::COLOR_BLUE:
-			_r = 0; _g = 0; _b = NCP5623_LED_BRIGHT;
+			//_r = 0; _g = 0; _b = NCP5623_LED_BRIGHT;
+			_r = NCP5623_LED_BRIGHT; _g = 0; _b = 0;
 			break;
 
 		case led_control_s::COLOR_AMBER: //make it the same as yellow
 		case led_control_s::COLOR_YELLOW:
-			_r = NCP5623_LED_BRIGHT; _g = NCP5623_LED_BRIGHT; _b = 0;
+			//_r = NCP5623_LED_BRIGHT; _g = NCP5623_LED_BRIGHT; _b = 0;
+			_r = 0; _g = NCP5623_LED_BRIGHT; _b = NCP5623_LED_BRIGHT;
 			break;
 
 		case led_control_s::COLOR_PURPLE:
@@ -264,7 +267,8 @@ RGBLED_NPC5623C::led()
 			break;
 
 		case led_control_s::COLOR_CYAN:
-			_r = 0; _g = NCP5623_LED_BRIGHT; _b = NCP5623_LED_BRIGHT;
+			//_r = 0; _g = NCP5623_LED_BRIGHT; _b = NCP5623_LED_BRIGHT;
+			_r = NCP5623_LED_BRIGHT; _g = NCP5623_LED_BRIGHT; _b = 0;
 			break;
 
 		case led_control_s::COLOR_WHITE:
