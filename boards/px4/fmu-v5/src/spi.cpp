@@ -57,6 +57,8 @@
 #include <stm32_gpio.h>
 #include "board_config.h"
 
+#include <stdio.h>
+
 /* Define CS GPIO array */
 static constexpr uint32_t spi1selects_gpio[] = PX4_SENSOR_BUS_CS_GPIO;
 static constexpr uint32_t spi2selects_gpio[] = PX4_MEMORY_BUS_CS_GPIO;
@@ -243,13 +245,15 @@ __EXPORT void stm32_spi6select(FAR struct spi_dev_s *dev, uint32_t devid, bool s
 {
 	ASSERT(PX4_SPI_BUS_ID(devid) == PX4_SPI_BUS_EXTERNAL2);
 
+    // Ignore CS for barometer IPT, should manual chip select!
+
 	// Making sure the other peripherals are not selected
-	for (auto cs : spi6selects_gpio) {
-		stm32_gpiowrite(cs, 1);
-	}
+	// for (auto cs : spi6selects_gpio) {
+	// 	stm32_gpiowrite(cs, 1);
+	// }
 
 	// SPI select is active low, so write !selected to select the device
-	stm32_gpiowrite(spi6selects_gpio[PX4_SPI_DEV_ID(devid)], !selected);
+    // stm32_gpiowrite(spi6selects_gpio[PX4_SPI_DEV_ID(devid)], !selected);
 }
 
 __EXPORT uint8_t stm32_spi6status(FAR struct spi_dev_s *dev, uint32_t devid)
