@@ -35,7 +35,6 @@
 
 // Stall time between SPI transfers
 static constexpr uint8_t T_STALL = 16;
-
 static constexpr uint32_t DIM_DEFAULT_RATE = 10;
 
 using namespace time_literals;
@@ -48,6 +47,7 @@ DIM::DIM(I2CSPIBusOption bus_option, int bus, int32_t device, enum Rotation rota
 	_bad_transfers(perf_alloc(PC_COUNT, MODULE_NAME": bad transfers")),
 	_drdy_gpio(drdy_gpio)
 {
+    is_power_on = false;
 }
 
 DIM::~DIM()
@@ -123,6 +123,8 @@ int DIM::power_on()
       printf("  * MaxIoDataSize    : %d\r\n", dim_power_report.io_data_size);
       printf("  * FileSize         : %d\r\n", dim_power_report.info_file_size);
   }
+
+  is_power_on = true;
   return OK;
 }
 
@@ -147,6 +149,7 @@ int DIM::power_off()
          dim_power_report.rv);
 
   printf("Power Off\r\n");
+  is_power_on = false;
   return OK;
 }
 
@@ -177,6 +180,14 @@ DIM::start()
 
     // start polling at the specified rate
     ScheduleOnInterval((1_s / DIM_DEFAULT_RATE), 10000);
+
+    uint8_t drbg[256] = {};
+    _kcmvpDrbg(drbg, 256);
+
+    for(int i = 0; i <256; i++) {
+        printf("%x ", drbg[i]);
+    }
+    printf("\n");
 
     ret = power_off();
     if (ret != OK) {
@@ -212,7 +223,7 @@ DIM::measure()
 {
     perf_begin(_sample_perf);
     // DEVICE_DEBUG("DIM measure");
-    printf("DIM measure\r\n");
+    //    printf("DIM measure\r\n");
     perf_end(_sample_perf);
 
     return OK;
@@ -224,4 +235,111 @@ DIM::print_status()
 	I2CSPIDriverBase::print_status();
 	perf_print_counter(_sample_perf);
 	perf_print_counter(_bad_transfers);
+}
+
+
+//// KCMVP /////////////////////////////////////////////////////////////////////
+#define KCMVP_AES128_KEY     0x40
+#define KCMVP_AES192_KEY     0x41
+#define KCMVP_AES256_KEY     0x42
+#define KCMVP_ARIA128_KEY    0x50
+#define KCMVP_ARIA192_KEY    0x51
+#define KCMVP_ARIA256_KEY    0x52
+#define KCMVP_HMAC_KEY       0x70
+#define KCMVP_ECDSA_KEYPAIR  0x80
+#define KCMVP_ECDSA_PRI_KEY  0x81
+#define KCMVP_ECDSA_PUB_KEY  0x82
+#define KCMVP_ECDH_KEYPAIR   0x90
+#define KCMVP_ECDH_PRI_KEY   0x91
+#define KCMVP_ECDH_PUB_KEY   0x92
+
+#define ENCRYPT  0
+#define DECRYPT  1
+
+#define KSE_TRUE   1
+#define KSE_FALSE  0
+#define NOT_USED   0
+#define NULL_PTR   ((void *)0)
+
+int16_t
+DIM::_kcmvpDrbg(uint8_t *pbRandom, uint16_t usRandomSize)
+{
+    uint16_t pbRandomCursor = 0;
+    // Check KSE power state.
+    if (!is_power_on)
+        return -1;
+
+    // Check input.
+    if ((pbRandom == NULL_PTR) || (usRandomSize == 0) || (usRandomSize > 256))
+        return -1;
+
+    memset(&dim_cmd, 0, sizeof(dim_cmd));
+
+    printf("Generate random number: %d\n", usRandomSize);
+    // Generate random number.
+
+    // request 0
+    dim_cmd.stx = 0xa5;
+    dim_cmd.dir = 0x05;
+    dim_cmd.offset = 0;
+    dim_cmd.len = 4;
+    dim_cmd.msgid = 0x10 << 8 | 0x02; // 0x0210
+    dim_cmd.data[0] = usRandomSize >> 8; // 256 lsb
+    dim_cmd.data[1] = usRandomSize & 0xff;
+
+    transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd));
+    up_mdelay(500);
+
+    transfer(nullptr, (uint8_t*)&dim_drbg_report, sizeof(dim_drbg_report));
+
+    /*
+    // first block
+    printf("EXPECT 0xa? 0x06 0x00 0x3c 0: %x %x %x %x %d ",
+                 dim_drbg_report.stx,
+                 dim_drbg_report.dir,
+                 dim_drbg_report.offset,
+                 dim_drbg_report.len,
+                 (dim_drbg_report.data[0] << 8)| dim_drbg_report.data[1]
+           );
+    */
+    for (int i = 2; i < dim_drbg_report.len; i++) {
+        // printf("%x ", dim_drbg_report.data[i]);
+        pbRandom[pbRandomCursor] = dim_drbg_report.data[i];
+        pbRandomCursor += 1;;
+    }
+    // printf("\n");
+
+    while ( dim_drbg_report.stx == 0xa1 || dim_drbg_report.stx == 0x11) {
+        // request middle block
+        dim_cmd.stx = dim_drbg_report.stx;
+        dim_cmd.dir = dim_drbg_report.dir;
+        dim_cmd.offset = dim_drbg_report.offset;
+        dim_cmd.len = dim_drbg_report.len;
+        dim_cmd.dir = 0xFE;
+
+        transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd));
+        up_mdelay(500);
+
+        transfer(nullptr, (uint8_t*)&dim_drbg_report, sizeof(dim_drbg_report));
+
+        /*
+        // response middle block
+        printf("EXPECT 0x1? 0x06 0x0? 0x??: %x %x %x %x ",
+               dim_drbg_report.stx,
+               dim_drbg_report.dir,
+               dim_drbg_report.offset,
+               dim_drbg_report.len);
+        */
+        for (int i = 0; i < dim_drbg_report.len; i++) {
+            // printf("%x ", dim_drbg_report.data[i]);
+            pbRandom[pbRandomCursor] = dim_drbg_report.data[i];
+            pbRandomCursor += 1;
+        }
+        // printf("\n");
+
+        if (dim_drbg_report.stx == 0x15) // if last block, break
+            break;
+    }
+
+    return OK;
 }

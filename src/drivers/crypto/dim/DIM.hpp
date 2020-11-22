@@ -59,16 +59,20 @@ public:
 	void			print_status() override;
 
 	void			RunImpl();
+
+    int16_t _kcmvpDrbg(uint8_t *pbRandom, uint16_t usRandomSize);
+
 protected:
 	int		probe() override;
 	void exit_and_cleanup() override;
 
 private:
-
 	perf_counter_t		_sample_perf;
 	perf_counter_t		_bad_transfers;
 
 	const spi_drdy_gpio_t _drdy_gpio;
+
+    bool    is_power_on;
 
     // BITS SWAP
     typedef union { uint8_t a[2]; uint16_t b; } __bitcast_u16;
@@ -119,6 +123,16 @@ private:
 	} dim_power_report{};
     #pragma pack(pop)
 
+    #pragma pack(push, 1) // Ensure proper memory alignment.
+	struct DimDrdgReport {
+        uint8_t stx;
+        uint8_t dir;
+        uint8_t offset;
+        uint8_t len;
+        uint8_t data[60];
+	} dim_drbg_report{};
+    #pragma pack(pop)
+
 #pragma pack(push, 1) // Ensure proper memory alignment.
 	struct Command {
         uint8_t stx;
@@ -126,7 +140,7 @@ private:
         uint8_t offset;
         uint8_t len;
 		uint16_t msgid;
-        uint8_t padding[58];
+        uint8_t data[58];
 	} dim_cmd{};
 #pragma pack(pop)
 
@@ -135,7 +149,7 @@ private:
 	 */
 	void			start();
 
-	int			power_on();
+ 	int			power_on();
 	int			power_off();
 
 	/**
