@@ -66,7 +66,10 @@ public:
                       uint16_t usIvSize, uint8_t *pbAuth, uint16_t usAuthSize,
                       uint8_t *pbTag, uint16_t usTagSize, uint8_t bEnDe,
                       uint8_t bAlg);
-protected:
+
+    void custom_method(const BusCLIArguments &cli) override;
+
+  protected:
 	int		probe() override;
 	void exit_and_cleanup() override;
 
@@ -155,7 +158,7 @@ private:
 	 * Start automatic measurement.
 	 */
 	void			start();
-
+    void            stop();
  	int			power_on();
 	int			power_off();
 
@@ -167,4 +170,6 @@ private:
 	int			reset();
 
 	int			measure();
+
+    void        encrypt_test(const char* file_name);
 };

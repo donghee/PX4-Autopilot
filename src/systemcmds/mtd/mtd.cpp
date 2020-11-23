@@ -86,7 +86,7 @@ struct mtd_instance_s;
 #  if defined(BOARD_HAS_MTD_PARTITION_OVERRIDE)
 #    define MTD_PARTITION_TABLE  BOARD_HAS_MTD_PARTITION_OVERRIDE
 #  else
-#   define MTD_PARTITION_TABLE  {"/fs/mtd_params", "/fs/mtd_waypoints"}
+#   define MTD_PARTITION_TABLE  {"/fs/mtd_params", "/fs/mtd_waypoints", "/fs/mtd_dim"}
 #  endif
 
 /* note, these will be equally sized */

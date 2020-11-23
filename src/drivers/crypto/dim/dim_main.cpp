@@ -47,6 +47,7 @@ DIM::print_usage()
 	PRINT_MODULE_USAGE_DEFAULT_COMMANDS();
 }
 
+
 I2CSPIDriverBase *DIM::instantiate(const BusCLIArguments &cli, const BusInstanceIterator &iterator,
 		int runtime_instance)
 {
@@ -68,20 +69,12 @@ I2CSPIDriverBase *DIM::instantiate(const BusCLIArguments &cli, const BusInstance
 
 extern "C" int dim_main(int argc, char *argv[])
 {
-	int ch;
  	using ThisDriver = DIM;
 	BusCLIArguments cli{false, true};
 	cli.default_spi_frequency = 4000000;
     cli.spi_mode = SPIDEV_MODE0;
-	while ((ch = cli.getopt(argc, argv, "R:")) != EOF) {
-		switch (ch) {
-		case 'R':
-			cli.rotation = (enum Rotation)atoi(cli.optarg());
-			break;
-		}
-	}
 
-	const char *verb = cli.optarg();
+    const char *verb = cli.parseDefaultArguments(argc, argv);
 
 	if (!verb) {
 		ThisDriver::print_usage();
@@ -100,6 +93,16 @@ extern "C" int dim_main(int argc, char *argv[])
 
 	if (!strcmp(verb, "status")) {
 		return ThisDriver::module_status(iterator);
+	}
+
+	if (!strcmp(verb, "flash")) {
+        cli.custom1 = 1;
+		return ThisDriver::module_custom_method(cli, iterator);
+	}
+
+	if (!strcmp(verb, "sd")) {
+        cli.custom1 = 2;
+		return ThisDriver::module_custom_method(cli, iterator);
 	}
 
 	ThisDriver::print_usage();
