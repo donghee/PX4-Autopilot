@@ -33,6 +33,40 @@
 
 #include "DIM.hpp"
 
+
+//// KSE DIM ///////////////////////////////////////////////////////////////////
+
+#define MAX_KCMVP_KEY_COUNT     8
+#define MAX_CERT_KEY_COUNT     96
+#define MAX_IO_DATA_SIZE     2944
+#define MAX_INFO_FILE_SIZE   8192
+
+//// KSE ///////////////////////////////////////////////////////////////////////
+
+#define KSE_TRUE   1
+#define KSE_FALSE  0
+#define NOT_USED   0
+#define NULL_PTR   ((void *)0)
+
+//// KCMVP /////////////////////////////////////////////////////////////////////
+#define KCMVP_AES128_KEY     0x40
+#define KCMVP_AES192_KEY     0x41
+#define KCMVP_AES256_KEY     0x42
+#define KCMVP_ARIA128_KEY    0x50
+#define KCMVP_ARIA192_KEY    0x51
+#define KCMVP_ARIA256_KEY    0x52
+#define KCMVP_HMAC_KEY       0x70
+#define KCMVP_ECDSA_KEYPAIR  0x80
+#define KCMVP_ECDSA_PRI_KEY  0x81
+#define KCMVP_ECDSA_PUB_KEY  0x82
+#define KCMVP_ECDH_KEYPAIR   0x90
+#define KCMVP_ECDH_PRI_KEY   0x91
+#define KCMVP_ECDH_PUB_KEY   0x92
+
+#define ENCRYPT  0
+#define DECRYPT  1
+
+
 // Stall time between SPI transfers
 static constexpr uint8_t T_STALL = 16;
 static constexpr uint32_t DIM_DEFAULT_RATE = 10;
@@ -145,7 +179,7 @@ int DIM::power_off()
 
   // read result value
   DEVICE_DEBUG("EXPECT 0xa5 0x06 0x00 0x02 0x00 0x00: %x %x %x %x %d \n",
-         dim_power_report.stx, dim_power_report.dir, dim_power_report.offset, dim_power_report.len,
+         dim_power_report.stx, dim_power_report.dir, dim_power_report.offset,   dim_power_report.len,
          dim_power_report.rv);
 
   printf("Power Off\r\n");
@@ -179,15 +213,50 @@ DIM::start()
     }
 
     // start polling at the specified rate
-    ScheduleOnInterval((1_s / DIM_DEFAULT_RATE), 10000);
+    //ScheduleOnInterval((1_s / DIM_DEFAULT_RATE), 10000);
 
-    uint8_t drbg[256] = {};
-    _kcmvpDrbg(drbg, 256);
+    uint8_t abData1[256], abData[256], abIv[16], abAuth[128], abTag[16];
 
-    for(int i = 0; i <256; i++) {
-        printf("%x ", drbg[i]);
+    _kcmvpDrbg(abData, 256);
+    _kcmvpDrbg(abIv, 16);
+    _kcmvpDrbg(abAuth, 128);
+
+    // ARIA
+    _kcmvpGcm(abData1, abData, 256, KCMVP_ARIA128_KEY, 0, abIv, 16,
+                                   abAuth, 128, abTag, 16, ENCRYPT, 0x50);
+
+    printf("  * Plain Data :\r\n    ");
+    for (int i = 0; i < 256; i++)
+    {
+        printf("%02X", abData[i]);
+        if ((i < 255) && ((i + 1) % 32 == 0))
+            printf("\r\n    ");
     }
-    printf("\n");
+    printf("\r\n");
+    printf("  * IV :\r\n    ");
+    for (int i = 0; i < 16; i++)
+        printf("%02X", abIv[i]);
+    printf("\r\n");
+    printf("  * Auth :\r\n    ");
+    for (int i = 0; i < 128; i++)
+    {
+        printf("%02X", abAuth[i]);
+        if ((i < 127) && ((i + 1) % 32 == 0))
+            printf("\r\n    ");
+    }
+    printf("\r\n");
+    printf("  * Encrypted Data :\r\n    ");
+    for (int i = 0; i < 256; i++)
+    {
+        printf("%02X", abData1[i]);
+        if ((i < 255) && ((i + 1) % 32 == 0))
+            printf("\r\n    ");
+    }
+    printf("\r\n");
+    printf("  * Tag :\r\n    ");
+    for (int i = 0; i < 16; i++)
+        printf("%02X", abTag[i]);
+    printf("\r\n");
 
     ret = power_off();
     if (ret != OK) {
@@ -237,30 +306,6 @@ DIM::print_status()
 	perf_print_counter(_bad_transfers);
 }
 
-
-//// KCMVP /////////////////////////////////////////////////////////////////////
-#define KCMVP_AES128_KEY     0x40
-#define KCMVP_AES192_KEY     0x41
-#define KCMVP_AES256_KEY     0x42
-#define KCMVP_ARIA128_KEY    0x50
-#define KCMVP_ARIA192_KEY    0x51
-#define KCMVP_ARIA256_KEY    0x52
-#define KCMVP_HMAC_KEY       0x70
-#define KCMVP_ECDSA_KEYPAIR  0x80
-#define KCMVP_ECDSA_PRI_KEY  0x81
-#define KCMVP_ECDSA_PUB_KEY  0x82
-#define KCMVP_ECDH_KEYPAIR   0x90
-#define KCMVP_ECDH_PRI_KEY   0x91
-#define KCMVP_ECDH_PUB_KEY   0x92
-
-#define ENCRYPT  0
-#define DECRYPT  1
-
-#define KSE_TRUE   1
-#define KSE_FALSE  0
-#define NOT_USED   0
-#define NULL_PTR   ((void *)0)
-
 int16_t
 DIM::_kcmvpDrbg(uint8_t *pbRandom, uint16_t usRandomSize)
 {
@@ -309,8 +354,8 @@ DIM::_kcmvpDrbg(uint8_t *pbRandom, uint16_t usRandomSize)
     }
     // printf("\n");
 
+    // request middle block
     while ( dim_drbg_report.stx == 0xa1 || dim_drbg_report.stx == 0x11) {
-        // request middle block
         dim_cmd.stx = dim_drbg_report.stx;
         dim_cmd.dir = dim_drbg_report.dir;
         dim_cmd.offset = dim_drbg_report.offset;
@@ -341,5 +386,316 @@ DIM::_kcmvpDrbg(uint8_t *pbRandom, uint16_t usRandomSize)
             break;
     }
 
+    return OK;
+}
+
+int16_t
+DIM::_kcmvpGcm(uint8_t *pbOutput, uint8_t *pbInput, uint16_t usInputSize,
+               uint8_t bKeyType, uint16_t usKeyIndex, uint8_t *pbIv,
+               uint16_t usIvSize, uint8_t *pbAuth, uint16_t usAuthSize,
+               uint8_t *pbTag, uint16_t usTagSize, uint8_t bEnDe,
+               uint8_t bAlg)
+{
+    //    uint8_t buffer[3072];
+    uint8_t buffer[512];
+    uint16_t pbOutputCursor = 0;
+
+    // Check KSE power state.
+    if (!is_power_on)
+        return -1;
+
+    // Check input.
+    if (((pbOutput == NULL_PTR) && (usInputSize != 0)) ||
+        ((pbInput == NULL_PTR) && (usInputSize != 0)) ||
+        (pbIv == NULL_PTR) ||
+        ((pbAuth == NULL_PTR) && (usAuthSize != 0)) ||
+        ((pbTag == NULL_PTR) && (usTagSize != 0)) ||
+        (((bAlg & 0xF0) ^ bKeyType) > 0x02) ||
+        (usKeyIndex >= MAX_KCMVP_KEY_COUNT) ||
+        (usIvSize == 0) || (usTagSize > 16) ||
+        (usInputSize + usIvSize + usAuthSize > MAX_IO_DATA_SIZE) ||
+        ((bEnDe != ENCRYPT) && (bEnDe != DECRYPT)))
+        return -1;
+
+    memset(&dim_cmd, 0, sizeof(dim_cmd));
+    memset(&buffer, 0, sizeof(buffer));
+
+    memcpy(buffer, pbIv, usIvSize);
+    memcpy(buffer+usIvSize, pbInput, usInputSize);
+    memcpy(buffer+usIvSize+usInputSize, pbAuth, usAuthSize);
+    //    int total_send_data = 12 + 16 + 256 + 128; // 12 + 400
+    //    int total_recv_data = total_send_data + usTagSize;
+
+    /*
+    printf("Dump buffer[%d]\n", sizeof(buffer));
+
+    for (int i = 0; i < 512; i++) {
+        printf("%x ", buffer[i]);
+    }
+    printf("\n");
+    */
+
+    printf("Encryption: %d\n", usInputSize);
+
+    // request 0
+    dim_cmd.stx = 0xa1;
+    dim_cmd.dir = 0x05;
+    dim_cmd.offset = 0;
+    dim_cmd.len = 60;
+    dim_cmd.msgid = ((uint16_t)(bAlg | 0x07) << 8) | 0x02; // 0x0257 lsb
+    //    dim_cmd.msg[0] = 0x02;
+    //    dim_cmd.msg[1] = 0x57;
+    dim_cmd.data[0] = bKeyType;
+    dim_cmd.data[1] = (uint8_t)(usKeyIndex >> 8);
+    dim_cmd.data[2] = (uint8_t)(usKeyIndex);
+    dim_cmd.data[3] = bEnDe;
+    dim_cmd.data[4] = (uint8_t)(usIvSize >> 8);
+    dim_cmd.data[5] = (uint8_t)(usIvSize);
+    dim_cmd.data[6] = (uint8_t)(usInputSize >> 8);
+    dim_cmd.data[7] = (uint8_t)(usInputSize);
+    dim_cmd.data[8] = (uint8_t)(usAuthSize >> 8);
+    dim_cmd.data[9] = (uint8_t)(usAuthSize);
+    dim_cmd.data[10] = (uint8_t)(usTagSize >> 8);
+    dim_cmd.data[11] = (uint8_t)(usTagSize);
+    // left data 58 - 12 = 46
+
+    for(int i = 0; i < 46; i++) {
+        dim_cmd.data[12+i] = buffer[i];
+    }
+
+    // transfer!!!
+    // -----------
+    transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd));
+    up_mdelay(500);
+    // And response
+    transfer(nullptr, (uint8_t*)&dim_drbg_report, sizeof(dim_drbg_report));
+    /*
+    printf("EXPECT 0xa? 0x06 0x00 0x3c 0: %x %x %x %x %d ",
+                 dim_drbg_report.stx,
+                 dim_drbg_report.dir,
+                 dim_drbg_report.offset,
+                 dim_drbg_report.len,
+                 (dim_drbg_report.data[0] << 8)| dim_drbg_report.data[1]
+           );
+    printf("\n");
+    */
+
+    // request 1
+    dim_cmd.stx = 0x11;
+    dim_cmd.dir = 0x05;
+    dim_cmd.offset = 1;
+    dim_cmd.len = 60;
+    dim_cmd.msg[0] = buffer[46];
+    dim_cmd.msg[1] = buffer[47];
+    for(int i = 48; i < 48+58; i++) {
+        dim_cmd.data[i-48] = buffer[i];
+    }
+
+    // transfer!!!
+    // -----------
+    transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd));
+    up_mdelay(500);
+    // And response
+    transfer(nullptr, (uint8_t*)&dim_drbg_report, sizeof(dim_drbg_report));
+    /*
+    printf("EXPECT 0xa? 0x06 0x00 0x3c 0: %x %x %x %x %d ",
+                 dim_drbg_report.stx,
+                 dim_drbg_report.dir,
+                 dim_drbg_report.offset,
+                 dim_drbg_report.len,
+                 (dim_drbg_report.data[0] << 8)| dim_drbg_report.data[1]
+           );
+    printf("\n");
+    */
+
+    // request 2
+    dim_cmd.stx = 0x11;
+    dim_cmd.dir = 0x05;
+    dim_cmd.offset = 2;
+    dim_cmd.len = 60;
+    dim_cmd.msg[0] = buffer[48+58];
+    dim_cmd.msg[1] = buffer[49+58];
+    for(int i = 50+58; i < 50+58+58; i++) {
+        dim_cmd.data[i-(50+58)] = buffer[i];
+    }
+
+    // transfer!!!
+    // -----------
+    transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd));
+    up_mdelay(500);
+    // And response
+    transfer(nullptr, (uint8_t*)&dim_drbg_report, sizeof(dim_drbg_report));
+    /*
+    printf("EXPECT 0xa? 0x06 0x00 0x3c 0: %x %x %x %x %d ",
+                 dim_drbg_report.stx,
+                 dim_drbg_report.dir,
+                 dim_drbg_report.offset,
+                 dim_drbg_report.len,
+                 (dim_drbg_report.data[0] << 8)| dim_drbg_report.data[1]
+           );
+    printf("\n");
+    */
+
+    // request 3
+    dim_cmd.stx = 0x11;
+    dim_cmd.dir = 0x05;
+    dim_cmd.offset = 3;
+    dim_cmd.len = 60;
+    dim_cmd.msg[0] = buffer[50+58+58];
+    dim_cmd.msg[1] = buffer[51+58+58];
+    for(int i = 52+58+58; i < 52+58+58+58; i++) {
+        dim_cmd.data[i-(52+58+58)] = buffer[i];
+    }
+
+    // transfer!!!
+    // -----------
+    transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd));
+    up_mdelay(500);
+    // And response
+    transfer(nullptr, (uint8_t*)&dim_drbg_report, sizeof(dim_drbg_report));
+    /*
+    printf("EXPECT 0xa? 0x06 0x00 0x3c 0: %x %x %x %x %d ",
+                 dim_drbg_report.stx,
+                 dim_drbg_report.dir,
+                 dim_drbg_report.offset,
+                 dim_drbg_report.len,
+                 (dim_drbg_report.data[0] << 8)| dim_drbg_report.data[1]
+           );
+    printf("\n");
+    */
+
+    // request 4
+    dim_cmd.stx = 0x11;
+    dim_cmd.dir = 0x05;
+    dim_cmd.offset = 4;
+    dim_cmd.len = 60;
+    dim_cmd.msg[0] = buffer[52+58+58+58];
+    dim_cmd.msg[1] = buffer[53+58+58+58];
+    for(int i = 54+58+58+58; i < 54+58+58+58+58; i++) {
+        dim_cmd.data[i-(54+58+58+58)] = buffer[i];
+    }
+
+    // transfer!!!
+    // -----------
+    transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd));
+    up_mdelay(500);
+    // And response
+    transfer(nullptr, (uint8_t*)&dim_drbg_report, sizeof(dim_drbg_report));
+    /*
+    printf("EXPECT 0xa? 0x06 0x00 0x3c 0: %x %x %x %x %d ",
+                 dim_drbg_report.stx,
+                 dim_drbg_report.dir,
+                 dim_drbg_report.offset,
+                 dim_drbg_report.len,
+                 (dim_drbg_report.data[0] << 8)| dim_drbg_report.data[1]
+           );
+    printf("\n");
+    */
+
+    // request 5
+    dim_cmd.stx = 0x11;
+    dim_cmd.dir = 0x05;
+    dim_cmd.offset = 5;
+    dim_cmd.len = 60;
+    dim_cmd.msg[0] = buffer[54+58+58+58+58];
+    dim_cmd.msg[1] = buffer[55+58+58+58+58];
+    for(int i = 56+58+58+58+58; i < 56+58+58+58+58+58; i++) {
+        dim_cmd.data[i-(56+58+58+58+58)] = buffer[i];
+    }
+
+    // transfer!!!
+    // -----------
+    transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd));
+    up_mdelay(500);
+    // And response
+    transfer(nullptr, (uint8_t*)&dim_drbg_report, sizeof(dim_drbg_report));
+    /*
+    printf("EXPECT 0xa? 0x06 0x00 0x3c 0: %x %x %x %x %d ",
+                 dim_drbg_report.stx,
+                 dim_drbg_report.dir,
+                 dim_drbg_report.offset,
+                 dim_drbg_report.len,
+                 (dim_drbg_report.data[0] << 8)| dim_drbg_report.data[1]
+           );
+    printf("\n");
+    */
+
+    memset(&dim_cmd, 0, sizeof(dim_cmd));
+
+    // request 6
+    dim_cmd.stx = 0x15;
+    dim_cmd.dir = 0x05;
+    dim_cmd.offset = 6;
+    dim_cmd.len = (400-348+2); // 54
+    dim_cmd.msg[0] = buffer[56+58+58+58+58+58];
+    dim_cmd.msg[1] = buffer[57+58+58+58+58+58];
+    for(int i = 58+58+58+58+58+58; i < 400; i++) {
+        dim_cmd.data[i-(58+58+58+58+58+58)] = buffer[i];
+    }
+
+    // transfer!!!
+    // -----------
+    transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd)); // not 54+4
+    up_mdelay(500);
+    // And response
+    transfer(nullptr, (uint8_t*)&dim_drbg_report, sizeof(dim_drbg_report));
+    /*
+    printf("EXPECT 0xa? 0x06 0x00 0x3c 0: %x %x %x %x %d ",
+                 dim_drbg_report.stx,
+                 dim_drbg_report.dir,
+                 dim_drbg_report.offset,
+                 dim_drbg_report.len,
+                 (dim_drbg_report.data[0] << 8)| dim_drbg_report.data[1]
+           );
+    */
+
+    for (int i = 2; i < dim_drbg_report.len; i++) {
+        //        printf("%x ", dim_drbg_report.data[i]);
+        pbOutput[pbOutputCursor] = dim_drbg_report.data[i];
+        pbOutputCursor += 1;
+    }
+    //    printf("\n");
+
+
+
+
+    // And read encryption data
+    while (dim_drbg_report.stx == 0xa1 || dim_drbg_report.stx == 0x11) {
+        dim_cmd.stx = dim_drbg_report.stx;
+        dim_cmd.dir = dim_drbg_report.dir;
+        dim_cmd.offset = dim_drbg_report.offset;
+        dim_cmd.len = dim_drbg_report.len;
+        dim_cmd.dir = 0xFE;
+
+        transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd));
+        up_mdelay(500);
+
+        transfer(nullptr, (uint8_t*)&dim_drbg_report, sizeof(dim_drbg_report));
+
+        // response middle block
+        /*
+        printf("EXPECT 0x1? 0x06 0x0? 0x??: %x %x %x %x ",
+               dim_drbg_report.stx,
+               dim_drbg_report.dir,
+               dim_drbg_report.offset,
+               dim_drbg_report.len);
+        */
+        for (int i = 0; i < dim_drbg_report.len; i++) {
+            //printf("%x ", dim_drbg_report.data[i]);
+            // check overflow pbOutput
+            if (dim_drbg_report.stx == 0x15 && i == (dim_drbg_report.len - usTagSize))
+                break;
+            pbOutput[pbOutputCursor] = dim_drbg_report.data[i];
+            pbOutputCursor += 1;
+        }
+        //        printf("\n");
+
+        if (dim_drbg_report.stx == 0x15) { // if last block, break
+            for (int i = 0; i < usTagSize ; i++) {
+                pbTag[i] = dim_drbg_report.data[dim_drbg_report.len - (usTagSize-i)];
+            }
+            break;
+        }
+    }
     return OK;
 }

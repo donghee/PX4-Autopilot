@@ -61,7 +61,11 @@ public:
 	void			RunImpl();
 
     int16_t _kcmvpDrbg(uint8_t *pbRandom, uint16_t usRandomSize);
-
+    int16_t _kcmvpGcm(uint8_t *pbOutput, uint8_t *pbInput, uint16_t usInputSize,
+                      uint8_t bKeyType, uint16_t usKeyIndex, uint8_t *pbIv,
+                      uint16_t usIvSize, uint8_t *pbAuth, uint16_t usAuthSize,
+                      uint8_t *pbTag, uint16_t usTagSize, uint8_t bEnDe,
+                      uint8_t bAlg);
 protected:
 	int		probe() override;
 	void exit_and_cleanup() override;
@@ -139,7 +143,10 @@ private:
         uint8_t dir;
         uint8_t offset;
         uint8_t len;
-		uint16_t msgid;
+        union {
+            uint16_t msgid;
+            uint8_t msg[2];
+        };
         uint8_t data[58];
 	} dim_cmd{};
 #pragma pack(pop)
