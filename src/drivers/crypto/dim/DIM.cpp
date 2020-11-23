@@ -258,6 +258,20 @@ DIM::start()
         printf("%02X", abTag[i]);
     printf("\r\n");
 
+    // ARIA
+    memset(&abData, 0, sizeof(abData));
+    _kcmvpGcm(abData, abData1, 256, KCMVP_ARIA128_KEY, 0, abIv, 16,
+                                   abAuth, 128, abTag, 16, DECRYPT, 0x50);
+
+    printf("  * Plain Data :\r\n    ");
+    for (int i = 0; i < 256; i++)
+    {
+        printf("%02X", abData[i]);
+        if ((i < 255) && ((i + 1) % 32 == 0))
+            printf("\r\n    ");
+    }
+    printf("\r\n");
+
     ret = power_off();
     if (ret != OK) {
         DEVICE_DEBUG("DIM power off error (%i)", ret);
@@ -396,7 +410,6 @@ DIM::_kcmvpGcm(uint8_t *pbOutput, uint8_t *pbInput, uint16_t usInputSize,
                uint8_t *pbTag, uint16_t usTagSize, uint8_t bEnDe,
                uint8_t bAlg)
 {
-    //    uint8_t buffer[3072];
     uint8_t buffer[512];
     uint16_t pbOutputCursor = 0;
 
@@ -423,19 +436,14 @@ DIM::_kcmvpGcm(uint8_t *pbOutput, uint8_t *pbInput, uint16_t usInputSize,
     memcpy(buffer, pbIv, usIvSize);
     memcpy(buffer+usIvSize, pbInput, usInputSize);
     memcpy(buffer+usIvSize+usInputSize, pbAuth, usAuthSize);
+    if(bEnDe == DECRYPT) {
+        printf("Decryption: %d\n", usInputSize);
+        memcpy(buffer+usIvSize+usInputSize+usAuthSize, pbTag, usTagSize);
     //    int total_send_data = 12 + 16 + 256 + 128; // 12 + 400
     //    int total_recv_data = total_send_data + usTagSize;
-
-    /*
-    printf("Dump buffer[%d]\n", sizeof(buffer));
-
-    for (int i = 0; i < 512; i++) {
-        printf("%x ", buffer[i]);
+    } else {
+        printf("Encryption: %d\n", usInputSize);
     }
-    printf("\n");
-    */
-
-    printf("Encryption: %d\n", usInputSize);
 
     // request 0
     dim_cmd.stx = 0xa1;
@@ -622,41 +630,105 @@ DIM::_kcmvpGcm(uint8_t *pbOutput, uint8_t *pbInput, uint16_t usInputSize,
 
     memset(&dim_cmd, 0, sizeof(dim_cmd));
 
-    // request 6
-    dim_cmd.stx = 0x15;
-    dim_cmd.dir = 0x05;
-    dim_cmd.offset = 6;
-    dim_cmd.len = (400-348+2); // 54
-    dim_cmd.msg[0] = buffer[56+58+58+58+58+58];
-    dim_cmd.msg[1] = buffer[57+58+58+58+58+58];
-    for(int i = 58+58+58+58+58+58; i < 400; i++) {
-        dim_cmd.data[i-(58+58+58+58+58+58)] = buffer[i];
+    if (bEnDe == ENCRYPT) {
+        // request 6
+        dim_cmd.stx = 0x15;
+        dim_cmd.dir = 0x05;
+        dim_cmd.offset = 6;
+        dim_cmd.len = (400-348+2); // 54
+        dim_cmd.msg[0] = buffer[56+58+58+58+58+58];
+        dim_cmd.msg[1] = buffer[57+58+58+58+58+58];
+        for(int i = 58+58+58+58+58+58; i < 400; i++) {
+            dim_cmd.data[i-(58+58+58+58+58+58)] = buffer[i];
+        }
+
+        // transfer!!!
+        // -----------
+        transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd)); // not 54+4
+        up_mdelay(500);
+
+        // And response
+        transfer(nullptr, (uint8_t*)&dim_drbg_report, sizeof(dim_drbg_report));
+        /*
+          printf("EXPECT 0xa? 0x06 0x00 0x3c 0: %x %x %x %x %d ",
+          dim_drbg_report.stx,
+          dim_drbg_report.dir,
+          dim_drbg_report.offset,
+          dim_drbg_report.len,
+          (dim_drbg_report.data[0] << 8)| dim_drbg_report.data[1]
+          );
+        */
+
+        for (int i = 2; i < dim_drbg_report.len; i++) {
+            //        printf("%x ", dim_drbg_report.data[i]);
+            pbOutput[pbOutputCursor] = dim_drbg_report.data[i];
+            pbOutputCursor += 1;
+        }
+        //    printf("\n");
+    } else { // DECRYPT
+        // request 6
+        dim_cmd.stx = 0x11;
+        dim_cmd.dir = 0x05;
+        dim_cmd.offset = 6;
+        dim_cmd.len = 60; // 54 + 6
+        dim_cmd.msg[0] = buffer[56+58+58+58+58+58];
+        dim_cmd.msg[1] = buffer[57+58+58+58+58+58];
+        for(int i = 58+58+58+58+58+58; i < 58+58+58+58+58+58+58; i++) {
+            dim_cmd.data[i-(58+58+58+58+58+58)] = buffer[i];
+        }
+
+        // transfer!!!
+        // -----------
+        transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd));
+        up_mdelay(500);
+
+        // And response
+        transfer(nullptr, (uint8_t*)&dim_drbg_report, sizeof(dim_drbg_report));
+        /*
+          printf("EXPECT 0xa? 0x06 0x00 0x3c 0: %x %x %x %x %d ",
+          dim_drbg_report.stx,
+          dim_drbg_report.dir,
+          dim_drbg_report.offset,
+          dim_drbg_report.len,
+          (dim_drbg_report.data[0] << 8)| dim_drbg_report.data[1]
+          );
+        */
+
+        // request 7
+        dim_cmd.stx = 0x15;
+        dim_cmd.dir = 0x05;
+        dim_cmd.offset = 7;
+        dim_cmd.len = (416-408+2) ; // 10
+        dim_cmd.msg[0] = buffer[58+58+58+58+58+58+58];
+        dim_cmd.msg[1] = buffer[59+58+58+58+58+58+58];
+        for(int i = 60+58+58+58+58+58+58; i < 416; i++) {
+            dim_cmd.data[i-(60+58+58+58+58+58+58)] = buffer[i];
+        }
+
+        // transfer!!!
+        // -----------
+        transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd));
+        up_mdelay(500);
+
+        // And response
+        transfer(nullptr, (uint8_t*)&dim_drbg_report, sizeof(dim_drbg_report));
+        /*
+          printf("EXPECT 0xa? 0x06 0x00 0x3c 0: %x %x %x %x %d ",
+          dim_drbg_report.stx,
+          dim_drbg_report.dir,
+          dim_drbg_report.offset,
+          dim_drbg_report.len,
+          (dim_drbg_report.data[0] << 8)| dim_drbg_report.data[1]
+          );
+        */
+
+        for (int i = 2; i < dim_drbg_report.len; i++) {
+            //        printf("%x ", dim_drbg_report.data[i]);
+            pbOutput[pbOutputCursor] = dim_drbg_report.data[i];
+            pbOutputCursor += 1;
+        }
+        //    printf("\n");
     }
-
-    // transfer!!!
-    // -----------
-    transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd)); // not 54+4
-    up_mdelay(500);
-    // And response
-    transfer(nullptr, (uint8_t*)&dim_drbg_report, sizeof(dim_drbg_report));
-    /*
-    printf("EXPECT 0xa? 0x06 0x00 0x3c 0: %x %x %x %x %d ",
-                 dim_drbg_report.stx,
-                 dim_drbg_report.dir,
-                 dim_drbg_report.offset,
-                 dim_drbg_report.len,
-                 (dim_drbg_report.data[0] << 8)| dim_drbg_report.data[1]
-           );
-    */
-
-    for (int i = 2; i < dim_drbg_report.len; i++) {
-        //        printf("%x ", dim_drbg_report.data[i]);
-        pbOutput[pbOutputCursor] = dim_drbg_report.data[i];
-        pbOutputCursor += 1;
-    }
-    //    printf("\n");
-
-
 
 
     // And read encryption data
@@ -683,14 +755,14 @@ DIM::_kcmvpGcm(uint8_t *pbOutput, uint8_t *pbInput, uint16_t usInputSize,
         for (int i = 0; i < dim_drbg_report.len; i++) {
             //printf("%x ", dim_drbg_report.data[i]);
             // check overflow pbOutput
-            if (dim_drbg_report.stx == 0x15 && i == (dim_drbg_report.len - usTagSize))
+            if (bEnDe == ENCRYPT && dim_drbg_report.stx == 0x15 && i == (dim_drbg_report.len - usTagSize))
                 break;
             pbOutput[pbOutputCursor] = dim_drbg_report.data[i];
             pbOutputCursor += 1;
         }
         //        printf("\n");
 
-        if (dim_drbg_report.stx == 0x15) { // if last block, break
+        if (bEnDe == ENCRYPT && dim_drbg_report.stx == 0x15) { // if last block, break
             for (int i = 0; i < usTagSize ; i++) {
                 pbTag[i] = dim_drbg_report.data[dim_drbg_report.len - (usTagSize-i)];
             }
