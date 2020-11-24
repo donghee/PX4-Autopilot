@@ -32,7 +32,10 @@
  ****************************************************************************/
 
 #include "DIM.hpp"
+#include <math.h>
 
+#define DIM_ENCRYPT 0
+#define DIM_DECRYPT 1
 
 //// KSE DIM ///////////////////////////////////////////////////////////////////
 
@@ -69,7 +72,7 @@
 
 // Stall time between SPI transfers
 static constexpr uint8_t T_STALL = 16;
-static constexpr uint32_t DIM_DEFAULT_RATE = 10;
+static constexpr uint32_t DIM_DEFAULT_RATE = 1;
 
 using namespace time_literals;
 
@@ -129,7 +132,7 @@ int DIM::power_on()
 
   transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd));
 
-  up_mdelay(1000);
+  px4_sleep(1);
 
   // read
   transfer(nullptr, (uint8_t*)&dim_power_report, sizeof(dim_power_report));
@@ -177,8 +180,7 @@ int DIM::power_off()
   dim_cmd.msgid = 0x01 << 8 | 0x00; // 0x0001 lsb
 
   transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd));
-  up_udelay(T_STALL);
-  up_mdelay(1000);
+  px4_usleep(1000000);
 
   transfer(nullptr, (uint8_t*)&dim_power_report, sizeof(dim_power_report));
 
@@ -201,17 +203,16 @@ DIM::probe()
       return ret;
   }
 
-  up_mdelay(1000);
-
   return PX4_OK;
 }
 
 
-void
-DIM::encrypt_test(const char* file_name) {
+int
+DIM::encrypt_test(const char* file_name, uint8_t* _plain_text, size_t count) {
     uint8_t encrypted_text[256], plain_text[256], abIv[16], abAuth[128], abTag[16];
 
-    _kcmvpDrbg(plain_text, 256);
+    memcpy(plain_text, _plain_text, 256);
+    // _kcmvpDrbg(plain_text, 256);
     _kcmvpDrbg(abIv, 16);
     _kcmvpDrbg(abAuth, 128);
 
@@ -313,6 +314,8 @@ DIM::encrypt_test(const char* file_name) {
             printf("\r\n    ");
     }
     printf("\r\n");
+
+    return PX4_OK;
 }
 
 void
@@ -324,7 +327,21 @@ DIM::start()
     }
 
     // start polling at the specified rate
-    // ScheduleOnInterval((1_s / DIM_DEFAULT_RATE), 10000);
+    ScheduleOnInterval((1_s / DIM_DEFAULT_RATE), 10000);
+
+    uint8_t plain_text[256];
+    _kcmvpDrbg(plain_text, 256);
+    printf("  * Plain Data0 :\r\n    ");
+    for (int i = 0; i < 256; i++) {
+        printf("%02X", plain_text[i]);
+        if ((i < 255) && ((i + 1) % 32 == 0))
+            printf("\r\n    ");
+    }
+    printf("\r\n    ");
+
+    encrypt_test("/fs/microsd/dim.txt", plain_text, 256);
+    px4_usleep(1000000);
+
 }
 
 void
@@ -341,6 +358,29 @@ DIM::stop()
         is_power_on = false;
     }
 }
+
+int
+DIM::ioctl(device::file_t *filp, int cmd, unsigned long arg)
+{
+	int ret = ENOTTY;
+    // uint8_t plain_text[256];
+	switch (cmd) {
+	case DIM_ENCRYPT:
+        // ret = encrypt_test((const char*)arg);
+		break;
+
+	case DIM_DECRYPT:
+        // ret = encrypt_test ((const char*)arg);
+        ret = 0;
+		break;
+
+	default:
+		break;
+	}
+
+	return ret;
+}
+
 
 void
 DIM::exit_and_cleanup()
@@ -370,7 +410,27 @@ DIM::measure()
 {
     perf_begin(_sample_perf);
     // DEVICE_DEBUG("DIM measure");
-    //    printf("DIM measure\r\n");
+
+    vehicle_global_position_s global_pos;
+    vehicle_local_position_s lpos;
+
+    if (_gpos_sub.update(&global_pos)) {
+        printf("gps %f, %f, %d\n",
+               global_pos.lat * 1e7,
+               global_pos.lon * 1e7,
+               sizeof(global_pos));
+    }
+
+    if (_lpos_sub.update(&lpos)) {
+        printf("lpos %lf, %lf, %lf, %d\n",
+               (double)lpos.x,
+               (double)lpos.y,
+               (double)lpos.z,
+               sizeof(lpos)
+               );
+        return true;
+    }
+
     perf_end(_sample_perf);
 
     return OK;
@@ -410,36 +470,36 @@ DIM::_kcmvpDrbg(uint8_t *pbRandom, uint16_t usRandomSize)
     dim_cmd.data[1] = usRandomSize & 0xff;
 
     transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd));
-    up_mdelay(500);
+    px4_usleep(500000);
 
-    transfer(nullptr, (uint8_t*)&dim_drbg_report, sizeof(dim_drbg_report));
+    transfer(nullptr, (uint8_t*)&dim_report, sizeof(dim_report));
 
-    // int ret = (dim_drbg_report.data[0] << 8)| dim_drbg_report.data[1];
+    // int ret = (dim_report.data[0] << 8)| dim_report.data[1];
 
-    for (int i = 2; i < dim_drbg_report.len; i++) {
-        pbRandom[pbRandomCursor] = dim_drbg_report.data[i];
+    for (int i = 2; i < dim_report.len; i++) {
+        pbRandom[pbRandomCursor] = dim_report.data[i];
         pbRandomCursor += 1;;
     }
 
     // request middle block
-    while ( dim_drbg_report.stx == 0xa1 || dim_drbg_report.stx == 0x11) {
-        dim_cmd.stx = dim_drbg_report.stx;
-        dim_cmd.dir = dim_drbg_report.dir;
-        dim_cmd.offset = dim_drbg_report.offset;
-        dim_cmd.len = dim_drbg_report.len;
+    while ( dim_report.stx == 0xa1 || dim_report.stx == 0x11) {
+        dim_cmd.stx = dim_report.stx;
+        dim_cmd.dir = dim_report.dir;
+        dim_cmd.offset = dim_report.offset;
+        dim_cmd.len = dim_report.len;
         dim_cmd.dir = 0xFE;
 
         transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd));
-        up_mdelay(500);
+        px4_usleep(500000);
 
-        transfer(nullptr, (uint8_t*)&dim_drbg_report, sizeof(dim_drbg_report));
+        transfer(nullptr, (uint8_t*)&dim_report, sizeof(dim_report));
 
-        for (int i = 0; i < dim_drbg_report.len; i++) {
-            pbRandom[pbRandomCursor] = dim_drbg_report.data[i];
+        for (int i = 0; i < dim_report.len; i++) {
+            pbRandom[pbRandomCursor] = dim_report.data[i];
             pbRandomCursor += 1;
         }
 
-        if (dim_drbg_report.stx == 0x15) // if last block, break
+        if (dim_report.stx == 0x15) // if last block, break
             break;
     }
 
@@ -453,7 +513,6 @@ DIM::_kcmvpGcm(uint8_t *pbOutput, uint8_t *pbInput, uint16_t usInputSize,
                uint8_t *pbTag, uint16_t usTagSize, uint8_t bEnDe,
                uint8_t bAlg)
 {
-    uint8_t buffer[512];
     uint16_t pbOutputCursor = 0;
 
     // Check KSE power state.
@@ -517,9 +576,9 @@ DIM::_kcmvpGcm(uint8_t *pbOutput, uint8_t *pbInput, uint16_t usInputSize,
     // transfer!!!
     // -----------
     transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd));
-    up_mdelay(500);
+    px4_usleep(500000);
     // And response
-    transfer(nullptr, (uint8_t*)&dim_drbg_report, sizeof(dim_drbg_report));
+    transfer(nullptr, (uint8_t*)&dim_report, sizeof(dim_report));
 
 
     // request 1
@@ -536,9 +595,9 @@ DIM::_kcmvpGcm(uint8_t *pbOutput, uint8_t *pbInput, uint16_t usInputSize,
     // transfer!!!
     // -----------
     transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd));
-    up_mdelay(500);
+    px4_usleep(500000);
     // And response
-    transfer(nullptr, (uint8_t*)&dim_drbg_report, sizeof(dim_drbg_report));
+    transfer(nullptr, (uint8_t*)&dim_report, sizeof(dim_report));
 
 
     // request 2
@@ -555,9 +614,9 @@ DIM::_kcmvpGcm(uint8_t *pbOutput, uint8_t *pbInput, uint16_t usInputSize,
     // transfer!!!
     // -----------
     transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd));
-    up_mdelay(500);
+    px4_usleep(500000);
     // And response
-    transfer(nullptr, (uint8_t*)&dim_drbg_report, sizeof(dim_drbg_report));
+    transfer(nullptr, (uint8_t*)&dim_report, sizeof(dim_report));
 
 
     // request 3
@@ -574,9 +633,9 @@ DIM::_kcmvpGcm(uint8_t *pbOutput, uint8_t *pbInput, uint16_t usInputSize,
     // transfer!!!
     // -----------
     transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd));
-    up_mdelay(500);
+    px4_usleep(500000);
     // And response
-    transfer(nullptr, (uint8_t*)&dim_drbg_report, sizeof(dim_drbg_report));
+    transfer(nullptr, (uint8_t*)&dim_report, sizeof(dim_report));
 
 
     // request 4
@@ -593,9 +652,9 @@ DIM::_kcmvpGcm(uint8_t *pbOutput, uint8_t *pbInput, uint16_t usInputSize,
     // transfer!!!
     // -----------
     transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd));
-    up_mdelay(500);
+    px4_usleep(500000);
     // And response
-    transfer(nullptr, (uint8_t*)&dim_drbg_report, sizeof(dim_drbg_report));
+    transfer(nullptr, (uint8_t*)&dim_report, sizeof(dim_report));
 
 
     // request 5
@@ -612,9 +671,9 @@ DIM::_kcmvpGcm(uint8_t *pbOutput, uint8_t *pbInput, uint16_t usInputSize,
     // transfer!!!
     // -----------
     transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd));
-    up_mdelay(500);
+    px4_usleep(500000);
     // And response
-    transfer(nullptr, (uint8_t*)&dim_drbg_report, sizeof(dim_drbg_report));
+    transfer(nullptr, (uint8_t*)&dim_report, sizeof(dim_report));
 
 
     memset(&dim_cmd, 0, sizeof(dim_cmd));
@@ -634,13 +693,13 @@ DIM::_kcmvpGcm(uint8_t *pbOutput, uint8_t *pbInput, uint16_t usInputSize,
         // transfer!!!
         // -----------
         transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd)); // not 54+4
-        up_mdelay(500);
+        px4_usleep(500000);
 
         // And response
-        transfer(nullptr, (uint8_t*)&dim_drbg_report, sizeof(dim_drbg_report));
+        transfer(nullptr, (uint8_t*)&dim_report, sizeof(dim_report));
 
-        for (int i = 2; i < dim_drbg_report.len; i++) {
-            pbOutput[pbOutputCursor] = dim_drbg_report.data[i];
+        for (int i = 2; i < dim_report.len; i++) {
+            pbOutput[pbOutputCursor] = dim_report.data[i];
             pbOutputCursor += 1;
         }
     } else { // DECRYPT
@@ -657,10 +716,10 @@ DIM::_kcmvpGcm(uint8_t *pbOutput, uint8_t *pbInput, uint16_t usInputSize,
         // transfer!!!
         // -----------
         transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd));
-        up_mdelay(500);
+        px4_usleep(500000);
 
         // And response
-        transfer(nullptr, (uint8_t*)&dim_drbg_report, sizeof(dim_drbg_report));
+        transfer(nullptr, (uint8_t*)&dim_report, sizeof(dim_report));
 
         // request 7
         dim_cmd.stx = 0x15;
@@ -676,41 +735,41 @@ DIM::_kcmvpGcm(uint8_t *pbOutput, uint8_t *pbInput, uint16_t usInputSize,
         // transfer!!!
         // -----------
         transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd));
-        up_mdelay(500);
+        px4_usleep(500000);
 
         // And response
-        transfer(nullptr, (uint8_t*)&dim_drbg_report, sizeof(dim_drbg_report));
+        transfer(nullptr, (uint8_t*)&dim_report, sizeof(dim_report));
 
-        for (int i = 2; i < dim_drbg_report.len; i++) {
-            pbOutput[pbOutputCursor] = dim_drbg_report.data[i];
+        for (int i = 2; i < dim_report.len; i++) {
+            pbOutput[pbOutputCursor] = dim_report.data[i];
             pbOutputCursor += 1;
         }
     }
 
     // And read encryption data
-    while (dim_drbg_report.stx == 0xa1 || dim_drbg_report.stx == 0x11) {
-        dim_cmd.stx = dim_drbg_report.stx;
-        dim_cmd.dir = dim_drbg_report.dir;
-        dim_cmd.offset = dim_drbg_report.offset;
-        dim_cmd.len = dim_drbg_report.len;
+    while (dim_report.stx == 0xa1 || dim_report.stx == 0x11) {
+        dim_cmd.stx = dim_report.stx;
+        dim_cmd.dir = dim_report.dir;
+        dim_cmd.offset = dim_report.offset;
+        dim_cmd.len = dim_report.len;
         dim_cmd.dir = 0xFE;
 
         transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd));
-        up_mdelay(500);
+        px4_usleep(500000);
 
-        transfer(nullptr, (uint8_t*)&dim_drbg_report, sizeof(dim_drbg_report));
+        transfer(nullptr, (uint8_t*)&dim_report, sizeof(dim_report));
 
-        for (int i = 0; i < dim_drbg_report.len; i++) {
+        for (int i = 0; i < dim_report.len; i++) {
             // check overflow pbOutput
-            if (bEnDe == ENCRYPT && dim_drbg_report.stx == 0x15 && i == (dim_drbg_report.len - usTagSize))
+            if (bEnDe == ENCRYPT && dim_report.stx == 0x15 && i == (dim_report.len - usTagSize))
                 break;
-            pbOutput[pbOutputCursor] = dim_drbg_report.data[i];
+            pbOutput[pbOutputCursor] = dim_report.data[i];
             pbOutputCursor += 1;
         }
 
-        if (bEnDe == ENCRYPT && dim_drbg_report.stx == 0x15) { // if last block, break
+        if (bEnDe == ENCRYPT && dim_report.stx == 0x15) { // if last block, break
             for (int i = 0; i < usTagSize ; i++) {
-                pbTag[i] = dim_drbg_report.data[dim_drbg_report.len - (usTagSize-i)];
+                pbTag[i] = dim_report.data[dim_report.len - (usTagSize-i)];
             }
             break;
         }
@@ -721,12 +780,24 @@ DIM::_kcmvpGcm(uint8_t *pbOutput, uint8_t *pbInput, uint16_t usInputSize,
 void
 DIM::custom_method(const BusCLIArguments &cli)
 {
+    uint8_t plain_text[256];
+    memset(&plain_text, 0, sizeof(plain_text));
+    _kcmvpDrbg(plain_text, 256);
+
     switch(cli.custom1) {
       case 1:
-        encrypt_test("/fs/mtd_dim");
+        encrypt_test("/fs/mtd_dim", plain_text, 256);
         break;
       case 2:
-        encrypt_test("/fs/microsd/dim.txt");
+        encrypt_test("/fs/microsd/dim.txt", plain_text, 256);
+        break;
+      case 3:
+        _kcmvpDrbg(plain_text, 16);
+        for (int i = 0; i < 16; i++)
+        {
+           printf("%02X", plain_text[i]);
+        }
+        printf("\r\n");
         break;
     }
 }

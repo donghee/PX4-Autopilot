@@ -105,6 +105,11 @@ extern "C" int dim_main(int argc, char *argv[])
 		return ThisDriver::module_custom_method(cli, iterator);
 	}
 
+	if (!strcmp(verb, "random")) {
+        cli.custom1 = 3;
+		return ThisDriver::module_custom_method(cli, iterator);
+	}
+
 	ThisDriver::print_usage();
 	return -1;
 }

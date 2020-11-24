@@ -42,6 +42,11 @@
 #include <perf/perf_counter.h>
 #include <px4_platform_common/getopt.h>
 #include <px4_platform_common/i2c_spi_buses.h>
+#include <uORB/Subscription.hpp>
+#include <uORB/topics/vehicle_local_position.h>
+#include <uORB/topics/vehicle_global_position.h>
+#include <uORB/topics/home_position.h>
+#include <uORB/topics/vehicle_air_data.h>
 
 class DIM : public device::SPI, public I2CSPIDriver<DIM>
 {
@@ -68,10 +73,12 @@ public:
                       uint8_t bAlg);
 
     void custom_method(const BusCLIArguments &cli) override;
+ 	int		ioctl(device::file_t *filp, int cmd, unsigned long arg) override;
 
   protected:
 	int		probe() override;
 	void exit_and_cleanup() override;
+
 
 private:
 	perf_counter_t		_sample_perf;
@@ -131,13 +138,13 @@ private:
     #pragma pack(pop)
 
     #pragma pack(push, 1) // Ensure proper memory alignment.
-	struct DimDrdgReport {
+	struct DimReport {
         uint8_t stx;
         uint8_t dir;
         uint8_t offset;
         uint8_t len;
         uint8_t data[60];
-	} dim_drbg_report{};
+	} dim_report{};
     #pragma pack(pop)
 
 #pragma pack(push, 1) // Ensure proper memory alignment.
@@ -171,5 +178,13 @@ private:
 
 	int			measure();
 
-    void        encrypt_test(const char* file_name);
+    int        encrypt_test(const char* file_name, uint8_t* _plain_text, size_t count);
+
+  	uORB::Subscription _lpos_sub{ORB_ID(vehicle_local_position)};
+  	uORB::Subscription _gpos_sub{ORB_ID(vehicle_global_position)};
+	uORB::Subscription _home_sub{ORB_ID(home_position)};
+	uORB::Subscription _air_data_sub{ORB_ID(vehicle_air_data)};
+
+    uint8_t buffer[512];
+
 };
