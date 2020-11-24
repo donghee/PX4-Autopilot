@@ -36,6 +36,7 @@
 
 #define DIM_ENCRYPT 0
 #define DIM_DECRYPT 1
+#define DIM_IS_POWER_ON 2
 
 //// KSE DIM ///////////////////////////////////////////////////////////////////
 
@@ -71,12 +72,12 @@
 
 
 // Stall time between SPI transfers
-static constexpr uint8_t T_STALL = 16;
+static constexpr uint32_t T_STALL = 250000; // TODO: Why this stall time is so big? check spec
 static constexpr uint32_t DIM_DEFAULT_RATE = 1;
 
 using namespace time_literals;
 
-#define DIM_DEVICE_PATH "/dev/dim0"
+#define DIM0_DEVICE_PATH "/dev/dim"
 
 DIM::DIM(I2CSPIBusOption bus_option, int bus, int32_t device, enum Rotation rotation, int bus_frequency,
 		     spi_mode_e spi_mode, spi_drdy_gpio_t drdy_gpio) :
@@ -87,12 +88,14 @@ DIM::DIM(I2CSPIBusOption bus_option, int bus, int32_t device, enum Rotation rota
 	_drdy_gpio(drdy_gpio)
 {
     is_power_on = false;
-    register_driver(DIM_DEVICE_PATH, &fops, 0666, (void *)this);
+    _class_instance = - 1;
 }
 
 DIM::~DIM()
 {
-    unregister_driver(DIM_DEVICE_PATH);
+	if (_class_instance != -1) {
+		unregister_class_devname(DIM0_DEVICE_PATH, _class_instance);
+	}
 
 	// delete the perf counters
 	perf_free(_sample_perf);
@@ -109,6 +112,8 @@ DIM::init()
 		DEVICE_DEBUG("SPI init failed (%i)", ret);
 		return ret;
 	}
+
+	_class_instance = register_class_devname(DIM0_DEVICE_PATH);
 
 	start();
 
@@ -132,7 +137,7 @@ int DIM::power_on()
 
   transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd));
 
-  px4_sleep(1);
+  px4_usleep(T_STALL);
 
   // read
   transfer(nullptr, (uint8_t*)&dim_power_report, sizeof(dim_power_report));
@@ -268,7 +273,7 @@ DIM::encrypt_test(const char* file_name, uint8_t* _plain_text, size_t count) {
     printf("\r\n");
 
     // Write MTD and Read MTD
-    int _fd = ::open(file_name, O_RDWR);
+    int _fd = ::open(file_name, O_RDWR | O_CREAT);
     if (_fd == -1) {
         printf("Error open %s\n", file_name);
         // return -errno;
@@ -327,21 +332,7 @@ DIM::start()
     }
 
     // start polling at the specified rate
-    ScheduleOnInterval((1_s / DIM_DEFAULT_RATE), 10000);
-
-    uint8_t plain_text[256];
-    _kcmvpDrbg(plain_text, 256);
-    printf("  * Plain Data0 :\r\n    ");
-    for (int i = 0; i < 256; i++) {
-        printf("%02X", plain_text[i]);
-        if ((i < 255) && ((i + 1) % 32 == 0))
-            printf("\r\n    ");
-    }
-    printf("\r\n    ");
-
-    encrypt_test("/fs/microsd/dim.txt", plain_text, 256);
-    px4_usleep(1000000);
-
+    //    ScheduleOnInterval((1_s / DIM_DEFAULT_RATE), 10000);
 }
 
 void
@@ -360,13 +351,25 @@ DIM::stop()
 }
 
 int
+DIM::open(struct file *filep)
+{
+    printf("open_first\n");
+	return CDev::open_first(filep);
+}
+
+int
 DIM::ioctl(device::file_t *filp, int cmd, unsigned long arg)
 {
 	int ret = ENOTTY;
-    // uint8_t plain_text[256];
+
+    typedef struct {
+        const char* filepath;
+        uint8_t buffer[256];
+    } file_io_t;
+
 	switch (cmd) {
-	case DIM_ENCRYPT:
-        // ret = encrypt_test((const char*)arg);
+        case DIM_ENCRYPT:
+        ret = encrypt_test(((file_io_t*) arg)->filepath, ((file_io_t*) arg)->buffer, 256);
 		break;
 
 	case DIM_DECRYPT:
@@ -374,6 +377,9 @@ DIM::ioctl(device::file_t *filp, int cmd, unsigned long arg)
         ret = 0;
 		break;
 
+	case DIM_IS_POWER_ON:
+        ret = is_power_on;
+		break;
 	default:
 		break;
 	}
@@ -470,7 +476,7 @@ DIM::_kcmvpDrbg(uint8_t *pbRandom, uint16_t usRandomSize)
     dim_cmd.data[1] = usRandomSize & 0xff;
 
     transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd));
-    px4_usleep(500000);
+    px4_usleep(T_STALL);
 
     transfer(nullptr, (uint8_t*)&dim_report, sizeof(dim_report));
 
@@ -490,7 +496,7 @@ DIM::_kcmvpDrbg(uint8_t *pbRandom, uint16_t usRandomSize)
         dim_cmd.dir = 0xFE;
 
         transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd));
-        px4_usleep(500000);
+        px4_usleep(T_STALL);
 
         transfer(nullptr, (uint8_t*)&dim_report, sizeof(dim_report));
 
@@ -576,7 +582,7 @@ DIM::_kcmvpGcm(uint8_t *pbOutput, uint8_t *pbInput, uint16_t usInputSize,
     // transfer!!!
     // -----------
     transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd));
-    px4_usleep(500000);
+    px4_usleep(T_STALL);
     // And response
     transfer(nullptr, (uint8_t*)&dim_report, sizeof(dim_report));
 
@@ -595,7 +601,7 @@ DIM::_kcmvpGcm(uint8_t *pbOutput, uint8_t *pbInput, uint16_t usInputSize,
     // transfer!!!
     // -----------
     transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd));
-    px4_usleep(500000);
+    px4_usleep(T_STALL);
     // And response
     transfer(nullptr, (uint8_t*)&dim_report, sizeof(dim_report));
 
@@ -614,7 +620,7 @@ DIM::_kcmvpGcm(uint8_t *pbOutput, uint8_t *pbInput, uint16_t usInputSize,
     // transfer!!!
     // -----------
     transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd));
-    px4_usleep(500000);
+    px4_usleep(T_STALL);
     // And response
     transfer(nullptr, (uint8_t*)&dim_report, sizeof(dim_report));
 
@@ -633,7 +639,7 @@ DIM::_kcmvpGcm(uint8_t *pbOutput, uint8_t *pbInput, uint16_t usInputSize,
     // transfer!!!
     // -----------
     transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd));
-    px4_usleep(500000);
+    px4_usleep(T_STALL);
     // And response
     transfer(nullptr, (uint8_t*)&dim_report, sizeof(dim_report));
 
@@ -652,7 +658,7 @@ DIM::_kcmvpGcm(uint8_t *pbOutput, uint8_t *pbInput, uint16_t usInputSize,
     // transfer!!!
     // -----------
     transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd));
-    px4_usleep(500000);
+    px4_usleep(T_STALL);
     // And response
     transfer(nullptr, (uint8_t*)&dim_report, sizeof(dim_report));
 
@@ -671,7 +677,7 @@ DIM::_kcmvpGcm(uint8_t *pbOutput, uint8_t *pbInput, uint16_t usInputSize,
     // transfer!!!
     // -----------
     transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd));
-    px4_usleep(500000);
+    px4_usleep(T_STALL);
     // And response
     transfer(nullptr, (uint8_t*)&dim_report, sizeof(dim_report));
 
@@ -693,7 +699,7 @@ DIM::_kcmvpGcm(uint8_t *pbOutput, uint8_t *pbInput, uint16_t usInputSize,
         // transfer!!!
         // -----------
         transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd)); // not 54+4
-        px4_usleep(500000);
+        px4_usleep(T_STALL);
 
         // And response
         transfer(nullptr, (uint8_t*)&dim_report, sizeof(dim_report));
@@ -716,7 +722,7 @@ DIM::_kcmvpGcm(uint8_t *pbOutput, uint8_t *pbInput, uint16_t usInputSize,
         // transfer!!!
         // -----------
         transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd));
-        px4_usleep(500000);
+        px4_usleep(T_STALL);
 
         // And response
         transfer(nullptr, (uint8_t*)&dim_report, sizeof(dim_report));
@@ -735,7 +741,7 @@ DIM::_kcmvpGcm(uint8_t *pbOutput, uint8_t *pbInput, uint16_t usInputSize,
         // transfer!!!
         // -----------
         transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd));
-        px4_usleep(500000);
+        px4_usleep(T_STALL);
 
         // And response
         transfer(nullptr, (uint8_t*)&dim_report, sizeof(dim_report));
@@ -755,7 +761,7 @@ DIM::_kcmvpGcm(uint8_t *pbOutput, uint8_t *pbInput, uint16_t usInputSize,
         dim_cmd.dir = 0xFE;
 
         transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd));
-        px4_usleep(500000);
+        px4_usleep(T_STALL);
 
         transfer(nullptr, (uint8_t*)&dim_report, sizeof(dim_report));
 

@@ -1,7 +1,7 @@
 /****************************************************************************
  *
  *   Copyright (c) 2018-2019 PX4 Development Team. All rights reserved.
- *
+n *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -38,10 +38,14 @@
 
 #pragma once
 
+#include <lib/cdev/CDev.hpp>
+
 #include <drivers/device/spi.h>
 #include <perf/perf_counter.h>
+
 #include <px4_platform_common/getopt.h>
 #include <px4_platform_common/i2c_spi_buses.h>
+
 #include <uORB/Subscription.hpp>
 #include <uORB/topics/vehicle_local_position.h>
 #include <uORB/topics/vehicle_global_position.h>
@@ -73,9 +77,10 @@ public:
                       uint8_t bAlg);
 
     void custom_method(const BusCLIArguments &cli) override;
- 	int		ioctl(device::file_t *filp, int cmd, unsigned long arg) override;
+    int open(struct file *filep);
+	int		ioctl(device::file_t *filp, int cmd, unsigned long arg) override;
 
-  protected:
+protected:
 	int		probe() override;
 	void exit_and_cleanup() override;
 
@@ -184,6 +189,8 @@ private:
   	uORB::Subscription _gpos_sub{ORB_ID(vehicle_global_position)};
 	uORB::Subscription _home_sub{ORB_ID(home_position)};
 	uORB::Subscription _air_data_sub{ORB_ID(vehicle_air_data)};
+
+	int			_class_instance;
 
     uint8_t buffer[512];
 
