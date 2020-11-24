@@ -221,7 +221,7 @@ DIM::encrypt_test(const char* file_name, uint8_t* _plain_text, size_t count) {
     _kcmvpDrbg(abIv, 16);
     _kcmvpDrbg(abAuth, 128);
 
-    // ARIA Encrypt
+    // ARIA (0x50) Encrypt
     _kcmvpGcm(encrypted_text, plain_text, 256, KCMVP_ARIA128_KEY, 0, abIv, 16,
                                    abAuth, 128, abTag, 16, ENCRYPT, 0x50);
 
@@ -306,7 +306,7 @@ DIM::encrypt_test(const char* file_name, uint8_t* _plain_text, size_t count) {
         _fd = -1;
     }
 
-    // ARIA Decrypt
+    // ARIA (0x50) Decrypt
     memset(&plain_text, 0, sizeof(plain_text));
     _kcmvpGcm(plain_text, encrypted_text, 256, KCMVP_ARIA128_KEY, 0, abIv, 16,
                                    abAuth, 128, abTag, 16, DECRYPT, 0x50);
@@ -579,7 +579,6 @@ DIM::_kcmvpGcm(uint8_t *pbOutput, uint8_t *pbInput, uint16_t usInputSize,
         dim_cmd.data[12+i] = buffer[i];
     }
 
-    // transfer!!!
     // -----------
     transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd));
     px4_usleep(T_STALL);
@@ -598,7 +597,6 @@ DIM::_kcmvpGcm(uint8_t *pbOutput, uint8_t *pbInput, uint16_t usInputSize,
         dim_cmd.data[i-48] = buffer[i];
     }
 
-    // transfer!!!
     // -----------
     transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd));
     px4_usleep(T_STALL);
@@ -617,7 +615,6 @@ DIM::_kcmvpGcm(uint8_t *pbOutput, uint8_t *pbInput, uint16_t usInputSize,
         dim_cmd.data[i-(50+58)] = buffer[i];
     }
 
-    // transfer!!!
     // -----------
     transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd));
     px4_usleep(T_STALL);
@@ -636,7 +633,6 @@ DIM::_kcmvpGcm(uint8_t *pbOutput, uint8_t *pbInput, uint16_t usInputSize,
         dim_cmd.data[i-(52+58+58)] = buffer[i];
     }
 
-    // transfer!!!
     // -----------
     transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd));
     px4_usleep(T_STALL);
@@ -655,7 +651,6 @@ DIM::_kcmvpGcm(uint8_t *pbOutput, uint8_t *pbInput, uint16_t usInputSize,
         dim_cmd.data[i-(54+58+58+58)] = buffer[i];
     }
 
-    // transfer!!!
     // -----------
     transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd));
     px4_usleep(T_STALL);
@@ -674,7 +669,6 @@ DIM::_kcmvpGcm(uint8_t *pbOutput, uint8_t *pbInput, uint16_t usInputSize,
         dim_cmd.data[i-(56+58+58+58+58)] = buffer[i];
     }
 
-    // transfer!!!
     // -----------
     transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd));
     px4_usleep(T_STALL);
@@ -696,7 +690,6 @@ DIM::_kcmvpGcm(uint8_t *pbOutput, uint8_t *pbInput, uint16_t usInputSize,
             dim_cmd.data[i-(58+58+58+58+58+58)] = buffer[i];
         }
 
-        // transfer!!!
         // -----------
         transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd)); // not 54+4
         px4_usleep(T_STALL);
@@ -719,7 +712,6 @@ DIM::_kcmvpGcm(uint8_t *pbOutput, uint8_t *pbInput, uint16_t usInputSize,
             dim_cmd.data[i-(58+58+58+58+58+58)] = buffer[i];
         }
 
-        // transfer!!!
         // -----------
         transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd));
         px4_usleep(T_STALL);
@@ -738,7 +730,6 @@ DIM::_kcmvpGcm(uint8_t *pbOutput, uint8_t *pbInput, uint16_t usInputSize,
             dim_cmd.data[i-(60+58+58+58+58+58+58)] = buffer[i];
         }
 
-        // transfer!!!
         // -----------
         transfer((uint8_t*)&dim_cmd, nullptr, sizeof(dim_cmd));
         px4_usleep(T_STALL);
@@ -798,8 +789,8 @@ DIM::custom_method(const BusCLIArguments &cli)
         encrypt_test("/fs/microsd/dim.txt", plain_text, 256);
         break;
       case 3:
-        _kcmvpDrbg(plain_text, 16);
-        for (int i = 0; i < 16; i++)
+        _kcmvpDrbg(plain_text, cli.custom2);
+        for (int i = 0; i < cli.custom2; i++)
         {
            printf("%02X", plain_text[i]);
         }

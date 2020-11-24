@@ -107,6 +107,11 @@ extern "C" int dim_main(int argc, char *argv[])
 
 	if (!strcmp(verb, "random")) {
         cli.custom1 = 3;
+        cli.custom2 = 16; // default random count
+        if (argc >= 3) {
+            uint16_t count = atoi(argv[2]);
+            cli.custom2 = count;
+        }
 		return ThisDriver::module_custom_method(cli, iterator);
 	}
 
