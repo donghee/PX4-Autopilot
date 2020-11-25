@@ -1,42 +1,10 @@
-/****************************************************************************
- *
- *   Copyright (c) 2018-2019 PX4 Development Team. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in
- *    the documentation and/or other materials provided with the
- *    distribution.
- * 3. Neither the name PX4 nor the names of its contributors may be
- *    used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
- * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
- * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- *
- ****************************************************************************/
-
 #include "DIM.hpp"
 #include <math.h>
 
 #define DIM_ENCRYPT 0
 #define DIM_DECRYPT 1
-#define DIM_IS_POWER_ON 2
+#define DIM_MAVLINK_ENCRYPT 2
+#define DIM_IS_POWER_ON 4
 
 //// KSE DIM ///////////////////////////////////////////////////////////////////
 
@@ -73,6 +41,7 @@
 
 // Stall time between SPI transfers
 static constexpr uint32_t T_STALL = 250000; // TODO: Why this stall time is so big? check spec
+// static constexpr uint32_t T_STALL = 400000; // TODO: Why this stall time is so big? check spec
 static constexpr uint32_t DIM_DEFAULT_RATE = 1;
 
 using namespace time_literals;
@@ -213,11 +182,10 @@ DIM::probe()
 
 
 int
-DIM::encrypt_test(const char* file_name, uint8_t* _plain_text, size_t count) {
+DIM::encrypt_self_test() {
     uint8_t encrypted_text[256], plain_text[256], abIv[16], abAuth[128], abTag[16];
 
-    memcpy(plain_text, _plain_text, 256);
-    // _kcmvpDrbg(plain_text, 256);
+    _kcmvpDrbg(plain_text, 256);
     _kcmvpDrbg(abIv, 16);
     _kcmvpDrbg(abAuth, 128);
 
@@ -272,8 +240,34 @@ DIM::encrypt_test(const char* file_name, uint8_t* _plain_text, size_t count) {
     }
     printf("\r\n");
 
+    return OK;
+}
+
+int
+DIM::encrypt_test(const char* file_name, uint8_t* _plain_text, size_t count) {
+    uint8_t encrypted_text[256], plain_text[256], abIv[16], abAuth[128], abTag[16];
+
+    //_kcmvpDrbg(plain_text, 256);
+    memcpy(plain_text, _plain_text, count);
+    _kcmvpDrbg(abIv, 16);
+    _kcmvpDrbg(abAuth, 128);
+
+    printf("Input: %d\r\n", count);
+    printf("  * Plain Data \r\n    ");
+    for (int i = 0; i < 256; i++)
+    {
+        printf("%02X", plain_text[i]);
+        if ((i < 255) && ((i + 1) % 32 == 0))
+            printf("\r\n    ");
+    }
+    printf("\r\n");
+
+    // ARIA (0x50) Encrypt
+    _kcmvpGcm(encrypted_text, plain_text, 256, KCMVP_ARIA128_KEY, 0, abIv, 16,
+                                   abAuth, 128, abTag, 16, ENCRYPT, 0x50);
+
     // Write MTD and Read MTD
-    int _fd = ::open(file_name, O_RDWR | O_CREAT);
+    int _fd = ::open(file_name, O_RDWR | O_CREAT); // O_APPEND
     if (_fd == -1) {
         printf("Error open %s\n", file_name);
         // return -errno;
@@ -292,7 +286,7 @@ DIM::encrypt_test(const char* file_name, uint8_t* _plain_text, size_t count) {
     }
 
     ::read(_fd, encrypted_text, sizeof(encrypted_text));
-    printf("  * Encryted Data in %s :\r\n    ", file_name);
+    printf("  * Write Encryted Data to %s :\r\n    ", file_name);
     for (int i = 0; i < 256; i++)
     {
         printf("%02X", encrypted_text[i]);
@@ -311,7 +305,7 @@ DIM::encrypt_test(const char* file_name, uint8_t* _plain_text, size_t count) {
     _kcmvpGcm(plain_text, encrypted_text, 256, KCMVP_ARIA128_KEY, 0, abIv, 16,
                                    abAuth, 128, abTag, 16, DECRYPT, 0x50);
 
-    printf("  * Plain Data :\r\n    ");
+    printf("  * Read Encrypted Data from %s and Decrypt it \r\n    ", file_name);
     for (int i = 0; i < 256; i++)
     {
         printf("%02X", plain_text[i]);
@@ -353,7 +347,7 @@ DIM::stop()
 int
 DIM::open(struct file *filep)
 {
-    printf("open_first\n");
+    // printf("open_first\n");
 	return CDev::open_first(filep);
 }
 
@@ -368,13 +362,17 @@ DIM::ioctl(device::file_t *filp, int cmd, unsigned long arg)
     } file_io_t;
 
 	switch (cmd) {
-        case DIM_ENCRYPT:
+    case DIM_ENCRYPT:
         ret = encrypt_test(((file_io_t*) arg)->filepath, ((file_io_t*) arg)->buffer, 256);
 		break;
 
 	case DIM_DECRYPT:
         // ret = encrypt_test ((const char*)arg);
         ret = 0;
+		break;
+    case DIM_MAVLINK_ENCRYPT:
+        printf("Save MAVLink #33 message on SD\r\n");
+        ret = encrypt_test(((file_io_t*) arg)->filepath, ((file_io_t*) arg)->buffer, 256);
 		break;
 
 	case DIM_IS_POWER_ON:
@@ -795,6 +793,9 @@ DIM::custom_method(const BusCLIArguments &cli)
            printf("%02X", plain_text[i]);
         }
         printf("\r\n");
+        break;
+      case 4:
+        encrypt_self_test();
         break;
     }
 }

@@ -2556,10 +2556,30 @@ private:
 	MavlinkStreamGlobalPositionInt(MavlinkStreamGlobalPositionInt &) = delete;
 	MavlinkStreamGlobalPositionInt &operator = (const MavlinkStreamGlobalPositionInt &) = delete;
 
+    int _count_of_write_log_using_dim = 0;
 protected:
 	explicit MavlinkStreamGlobalPositionInt(Mavlink *mavlink) : MavlinkStream(mavlink)
 	{}
 
+    int _write_log_using_dim(uint8_t* buffer, int count)
+    {
+        typedef struct {
+            const char* filepath;
+            uint8_t buffer[256];
+        } file_io_t;
+
+        file_io_t io = {"/fs/microsd/global_position_int.log",{}};
+        memcpy(&(io.buffer), buffer, count);
+
+        int fd = px4_open("/dev/dim0", O_RDWR);
+        if (fd < 0) {
+            PX4_ERR("can't open DIM device");
+            return -1;
+        }
+        px4_ioctl(fd, 2, &io);
+        px4_close(fd);
+        return 0;
+    }
 	bool send() override
 	{
 		vehicle_global_position_s gpos;
@@ -2610,6 +2630,19 @@ protected:
 			msg.hdg = math::degrees(wrap_2pi(lpos.heading)) * 100.0f;
 
 			mavlink_msg_global_position_int_send_struct(_mavlink->get_channel(), &msg);
+
+            // printf("mavlink channel %d\n", _mavlink->get_channel());
+            // SAVE MAVLINK #33 USING DIM
+            if (_mavlink->get_channel() == 0) {
+                uint8_t send_buffer[36];
+                mavlink_message_t message;
+                mavlink_msg_global_position_int_pack(0, 0, &message, msg.time_boot_ms, msg.lat, msg.lon, msg.alt, msg.relative_alt, msg.vx, msg.vy, msg.vz, msg.hdg);
+                int send_size = mavlink_msg_to_send_buffer((uint8_t*)send_buffer, &message);
+                if ( _count_of_write_log_using_dim % 5 == 0) { // after 200 times send(), about 20 sec.
+                    _write_log_using_dim(send_buffer, send_size);
+                }
+                _count_of_write_log_using_dim++;
+            }
 
 			return true;
 		}

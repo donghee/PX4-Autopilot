@@ -115,21 +115,26 @@ extern "C" int dim_main(int argc, char *argv[])
 		return ThisDriver::module_custom_method(cli, iterator);
 	}
 
+	if (!strcmp(verb, "test")) {
+        cli.custom1 = 4;
+		return ThisDriver::module_custom_method(cli, iterator);
+	}
+
 	if (!strcmp(verb, "mavlink")) {
         typedef struct {
             const char* filepath;
-            uint8_t buffer[256];
+            uint8_t buffer[42];
         } file_io_t;
         file_io_t io = {"/fs/microsd/global_position_int.log",{}};
         memset(&(io.buffer), 0xaa, sizeof(io.buffer));
 
-        int fd = ::open("/dev/dim0", O_RDWR);
+        int fd = px4_open("/dev/dim0", O_RDWR);
         if (fd < 0) {
             PX4_ERR("can't open DIM device");
             return -1;
         }
-        ::ioctl(fd, 0, &io);
-        ::close(fd);
+        px4_ioctl(fd, 0, &io);
+        px4_close(fd);
         return 0;
 	}
 

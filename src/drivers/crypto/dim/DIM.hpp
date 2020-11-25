@@ -184,6 +184,7 @@ private:
 	int			measure();
 
     int        encrypt_test(const char* file_name, uint8_t* _plain_text, size_t count);
+    int        encrypt_self_test();
 
   	uORB::Subscription _lpos_sub{ORB_ID(vehicle_local_position)};
   	uORB::Subscription _gpos_sub{ORB_ID(vehicle_global_position)};
