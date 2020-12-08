@@ -49,24 +49,22 @@ namespace ipt
  */
 #pragma pack(push,1)
 
-typedef struct
-{
-    float64 A;
-    float64 A1, A2, A3, A4, A5, A6;
-    float64 B1, B2, B3, B4, B5, B6;
-    float64 C1, C2, C3, C4, C5, C6;
-    float64 D1, D2, D3, D4, D5, D6;
-    float64 E1, E2, E3, E4, E5, E6;
-    float64 FA1, FA2, FA3, FA4, FA5, FA6;
-    float64 G1, G2, G3, G4;
+typedef struct {
+	float64 A;
+	float64 A1, A2, A3, A4, A5, A6;
+	float64 B1, B2, B3, B4, B5, B6;
+	float64 C1, C2, C3, C4, C5, C6;
+	float64 D1, D2, D3, D4, D5, D6;
+	float64 E1, E2, E3, E4, E5, E6;
+	float64 FA1, FA2, FA3, FA4, FA5, FA6;
+	float64 G1, G2, G3, G4;
 } coef_s;
 
-typedef struct
-{
-    float64 PT_PSI, PS_PSI;
-    float64 PT_TEMP, PS_TEMP;
-    float64 PT_inHg, PS_inHg;
-    float64 BARO_ALT, BARO_SPD;
+typedef struct {
+	float64 PT_PSI, PS_PSI;
+	float64 PT_TEMP, PS_TEMP;
+	float64 PT_inHg, PS_inHg;
+	float64 BARO_ALT, BARO_SPD;
 } ipt_s;
 
 

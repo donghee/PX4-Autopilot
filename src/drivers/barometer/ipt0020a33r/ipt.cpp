@@ -223,7 +223,7 @@ protected:
 extern "C" __EXPORT int ipt_main(int argc, char *argv[]);
 
 IPT::IPT(device::Device *interface, ipt::prom_u &prom_buf, const char *path,
-	       enum IPT_DEVICE_TYPES device_type) :
+	 enum IPT_DEVICE_TYPES device_type) :
 	CDev(path),
 	_interface(interface),
 	// _prom(prom_buf.s),
@@ -671,28 +671,28 @@ IPT::collect()
 		return ret;
 	}
 
-    /* pressure calculation, result in Pa */
-    int32_t P = (((raw * _SENS) >> 21) - _OFF) >> 15;
-    _P = P * 0.01f;
-    _T = _TEMP * 0.01f;
+	/* pressure calculation, result in Pa */
+	int32_t P = (((raw * _SENS) >> 21) - _OFF) >> 15;
+	_P = P * 0.01f;
+	_T = _TEMP * 0.01f;
 
-    /* generate a new report */
-    report.temperature = _TEMP / 100.0f;
-    report.pressure = P / 100.0f;		/* convert to millibar */
+	/* generate a new report */
+	report.temperature = _TEMP / 100.0f;
+	report.pressure = P / 100.0f;		/* convert to millibar */
 
-    /* return device ID */
-    report.device_id = _interface->get_device_id();
+	/* return device ID */
+	report.device_id = _interface->get_device_id();
 
-    /* publish it */
-    if (_baro_topic != nullptr) {
-        /* publish it */
-        orb_publish(ORB_ID(sensor_baro), _baro_topic, &report);
-    }
+	/* publish it */
+	if (_baro_topic != nullptr) {
+		/* publish it */
+		orb_publish(ORB_ID(sensor_baro), _baro_topic, &report);
+	}
 
-    _reports->force(&report);
+	_reports->force(&report);
 
-    /* notify anyone waiting for data */
-    poll_notify(POLLIN);
+	/* notify anyone waiting for data */
+	poll_notify(POLLIN);
 
 	/* update the measurement state machine */
 	INCREMENT(_measure_phase, IPT_MEASUREMENT_RATIO + 1);

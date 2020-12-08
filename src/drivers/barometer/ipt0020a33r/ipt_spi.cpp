@@ -57,9 +57,9 @@
 #include "board_config.h"
 
 typedef struct {
-    uint32_t pressure;
-    uint32_t temperature;
-    uint32_t eeprom;
+	uint32_t pressure;
+	uint32_t temperature;
+	uint32_t eeprom;
 } ipt_cs;
 
 enum IPT_DEVICE {
@@ -105,16 +105,16 @@ private:
 	 *
 	 * @return		OK if the PROM reads successfully.
 	 */
-    int     _init_pressure_channel(IPT_DEVICE ipt);
-    int     _init_temperature_channel(IPT_DEVICE ipt);
+	int     _init_pressure_channel(IPT_DEVICE ipt);
+	int     _init_temperature_channel(IPT_DEVICE ipt);
 
-    int     _read_pressure_channel(IPT_DEVICE ipt);
-    int     _read_temperature_channel(IPT_DEVICE ipt);
-    uint8_t     _read_eeprom(IPT_DEVICE ipt, uint8_t addr);
-    int     _read_correction_coef();
+	int     _read_pressure_channel(IPT_DEVICE ipt);
+	int     _read_temperature_channel(IPT_DEVICE ipt);
+	uint8_t     _read_eeprom(IPT_DEVICE ipt, uint8_t addr);
+	int     _read_correction_coef();
 
-    int     _read_serial_number(IPT_DEVICE ipt);
-    float64 _ieee754_single(uint32_t i_data);
+	int     _read_serial_number(IPT_DEVICE ipt);
+	float64 _ieee754_single(uint32_t i_data);
 	/**
 	 * Read a 16-bit register value.
 	 *
@@ -134,11 +134,11 @@ private:
 device::Device *
 IPT_spi_interface(ipt::prom_u &prom_buf, uint8_t busnum)
 {
-    return new IPT_SPI(busnum, PX4_SPIDEV_EXTERNAL2_1, prom_buf);
+	return new IPT_SPI(busnum, PX4_SPIDEV_EXTERNAL2_1, prom_buf);
 }
 
 IPT_SPI::IPT_SPI(uint8_t bus, uint32_t device, ipt::prom_u &prom_buf) :
-    // SPI("IPT_SPI", nullptr, bus, device, SPIDEV_MODE3, 20 * 1000 * 1000 /* will be rounded to 10 MHz */),
+	// SPI("IPT_SPI", nullptr, bus, device, SPIDEV_MODE3, 20 * 1000 * 1000 /* will be rounded to 10 MHz */),
 	SPI("IPT_SPI", nullptr, bus, device, SPIDEV_MODE3, 5 * 1000 * 100 /* will be rounded to 1000kHz */),
 	_prom(prom_buf)
 {
@@ -156,29 +156,29 @@ IPT_SPI::init()
 		goto out;
 	}
 
-    // printf("ipt_cs_gpio[IPT0].pressure %d\n", ipt_cs_gpio[IPT0].pressure);
-    // printf("SPI6_CS1_EXTERNAL2 %d\n", SPI6_CS1_EXTERNAL2);
-    // printf("ipt_cs_gpio[IPT0].temperature %d\n", ipt_cs_gpio[IPT0].temperature);
-    // printf("SPI6_CS2_EXTERNAL2 %d\n", SPI6_CS2_EXTERNAL2);
-    // printf("ipt_cs_gpio[IPT0].eeprom %d\n", ipt_cs_gpio[IPT0].eeprom);
-    // printf("SPI6_CS3_EXTERNAL2 %d\n", SPI6_CS3_EXTERNAL2);
-    // printf("ipt_cs_gpio[IPT1].pressure %d\n", ipt_cs_gpio[IPT1].pressure);
-    // printf("SPI6_CS4_EXTERNAL2 %d\n", SPI6_CS4_EXTERNAL2);
-    // printf("ipt_cs_gpio[IPT1].temperature %d\n", ipt_cs_gpio[IPT1].temperature);
-    // printf("SPI6_CS5_EXTERNAL2 %d\n", SPI6_CS5_EXTERNAL2);
-    // printf("ipt_cs_gpio[IPT1].eeprom %d\n", ipt_cs_gpio[IPT1].eeprom);
-    // printf("SPI6_CS6_EXTERNAL2 %d\n", SPI6_CS6_EXTERNAL2);
+	// printf("ipt_cs_gpio[IPT0].pressure %d\n", ipt_cs_gpio[IPT0].pressure);
+	// printf("SPI6_CS1_EXTERNAL2 %d\n", SPI6_CS1_EXTERNAL2);
+	// printf("ipt_cs_gpio[IPT0].temperature %d\n", ipt_cs_gpio[IPT0].temperature);
+	// printf("SPI6_CS2_EXTERNAL2 %d\n", SPI6_CS2_EXTERNAL2);
+	// printf("ipt_cs_gpio[IPT0].eeprom %d\n", ipt_cs_gpio[IPT0].eeprom);
+	// printf("SPI6_CS3_EXTERNAL2 %d\n", SPI6_CS3_EXTERNAL2);
+	// printf("ipt_cs_gpio[IPT1].pressure %d\n", ipt_cs_gpio[IPT1].pressure);
+	// printf("SPI6_CS4_EXTERNAL2 %d\n", SPI6_CS4_EXTERNAL2);
+	// printf("ipt_cs_gpio[IPT1].temperature %d\n", ipt_cs_gpio[IPT1].temperature);
+	// printf("SPI6_CS5_EXTERNAL2 %d\n", SPI6_CS5_EXTERNAL2);
+	// printf("ipt_cs_gpio[IPT1].eeprom %d\n", ipt_cs_gpio[IPT1].eeprom);
+	// printf("SPI6_CS6_EXTERNAL2 %d\n", SPI6_CS6_EXTERNAL2);
 
-    // init chip select
-    // for (int i = 0; i <= IPT1; i++) {
-    //     px4_arch_configgpio(ipt_cs_gpio[i].pressure);
-    //     px4_arch_configgpio(ipt_cs_gpio[i].temperature);
-    //     px4_arch_configgpio(ipt_cs_gpio[i].eeprom);
+	// init chip select
+	// for (int i = 0; i <= IPT1; i++) {
+	//     px4_arch_configgpio(ipt_cs_gpio[i].pressure);
+	//     px4_arch_configgpio(ipt_cs_gpio[i].temperature);
+	//     px4_arch_configgpio(ipt_cs_gpio[i].eeprom);
 
-    //     px4_arch_gpiowrite(ipt_cs_gpio[i].pressure, 1);
-    //     px4_arch_gpiowrite(ipt_cs_gpio[i].temperature, 1);
-    //     px4_arch_gpiowrite(ipt_cs_gpio[i].eeprom, 1);
-    // }
+	//     px4_arch_gpiowrite(ipt_cs_gpio[i].pressure, 1);
+	//     px4_arch_gpiowrite(ipt_cs_gpio[i].temperature, 1);
+	//     px4_arch_gpiowrite(ipt_cs_gpio[i].eeprom, 1);
+	// }
 	px4_arch_configgpio(SPI6_CS1_EXTERNAL2);
 	px4_arch_configgpio(SPI6_CS2_EXTERNAL2);
 	px4_arch_configgpio(SPI6_CS3_EXTERNAL2);
@@ -186,42 +186,50 @@ IPT_SPI::init()
 	px4_arch_configgpio(SPI6_CS5_EXTERNAL2);
 	px4_arch_configgpio(SPI6_CS6_EXTERNAL2);
 
-    px4_arch_gpiowrite(SPI6_CS1_EXTERNAL2, 1);
-    px4_arch_gpiowrite(SPI6_CS2_EXTERNAL2, 1);
-    px4_arch_gpiowrite(SPI6_CS3_EXTERNAL2, 1);
-    px4_arch_gpiowrite(SPI6_CS4_EXTERNAL2, 1);
-    px4_arch_gpiowrite(SPI6_CS5_EXTERNAL2, 1);
-    px4_arch_gpiowrite(SPI6_CS6_EXTERNAL2, 1);
+	px4_arch_gpiowrite(SPI6_CS1_EXTERNAL2, 1);
+	px4_arch_gpiowrite(SPI6_CS2_EXTERNAL2, 1);
+	px4_arch_gpiowrite(SPI6_CS3_EXTERNAL2, 1);
+	px4_arch_gpiowrite(SPI6_CS4_EXTERNAL2, 1);
+	px4_arch_gpiowrite(SPI6_CS5_EXTERNAL2, 1);
+	px4_arch_gpiowrite(SPI6_CS6_EXTERNAL2, 1);
 
-    _read_serial_number(IPT0);
-    _read_serial_number(IPT1);
+	_read_serial_number(IPT0);
+	_read_serial_number(IPT1);
 
 	ret = _init_pressure_channel(IPT0);
+
 	if (ret != OK) {
 		PX4_DEBUG("pressure channel init failed");
 		goto out;
 	}
-    px4_usleep(1000);
+
+	px4_usleep(1000);
 	ret = _init_temperature_channel(IPT0);
+
 	if (ret != OK) {
 		PX4_DEBUG("temperature channel init failed");
 		goto out;
 	}
-    px4_usleep(1000);
+
+	px4_usleep(1000);
 
 	ret = _init_pressure_channel(IPT1);
+
 	if (ret != OK) {
 		PX4_DEBUG("pressure channel init failed");
 		goto out;
 	}
-    px4_usleep(1000);
+
+	px4_usleep(1000);
 
 	ret = _init_temperature_channel(IPT1);
+
 	if (ret != OK) {
 		PX4_DEBUG("temperature channel init failed");
 		goto out;
 	}
-    px4_usleep(1000);
+
+	px4_usleep(1000);
 
 out:
 	return ret;
@@ -284,257 +292,258 @@ IPT_SPI::_reset()
 	// uint8_t cmd = ADDR_RESET_CMD | DIR_WRITE;
 
 	// return  _transfer(&cmd, nullptr, 1);
-    return OK;
+	return OK;
 }
 
 int
 IPT_SPI::_measure()
 {
-    _read_pressure_channel(IPT0);
-    _read_pressure_channel(IPT1);
+	_read_pressure_channel(IPT0);
+	_read_pressure_channel(IPT1);
 
-    _read_temperature_channel(IPT0);
-    _read_temperature_channel(IPT1);
+	_read_temperature_channel(IPT0);
+	_read_temperature_channel(IPT1);
 
-    return OK;
+	return OK;
 }
 
 int
 IPT_SPI::_read_serial_number(IPT_DEVICE ipt)
 {
-    uint32_t serial_number = 0;
-    uint8_t data[4] = { 0, 0, 0, 0 };
+	uint32_t serial_number = 0;
+	uint8_t data[4] = { 0, 0, 0, 0 };
 
 	data[0] = _read_eeprom(ipt, 0xAC);
 	data[1] = _read_eeprom(ipt, 0xAD);
 	data[2] = _read_eeprom(ipt, 0xAE);
-    data[3] = _read_eeprom(ipt, 0xAF);
+	data[3] = _read_eeprom(ipt, 0xAF);
 
-    serial_number = (data[0] << 24) | (data[1] << 16) | (data[2] << 8) | data[3];
-    printf("DEVICE %d Serial No: %lu\n", ipt, serial_number);
+	serial_number = (data[0] << 24) | (data[1] << 16) | (data[2] << 8) | data[3];
+	printf("DEVICE %d Serial No: %lu\n", ipt, serial_number);
 
-    return OK;
+	return OK;
 }
 
 int
 IPT_SPI::_read_correction_coef()
 {
-    // 00~93
-    // coef_s ps_coef;
-    // ps_coef.A = 0;
+	// 00~93
+	// coef_s ps_coef;
+	// ps_coef.A = 0;
 
-    return OK;
+	return OK;
 }
 
 float64
 IPT_SPI::_ieee754_single(uint32_t i_data)
 {
-    /* IEEE 754 single - Precision Floating-point format
-     *
-     * 31 bit : sign
-     * 30 - 23 bit : exponent (8 bit)
-     * 22 - 0  bit : fraction (23 bit)
-     *
-     * example
-     * 0x41 0x29 0x02 0xDE
-     * 0100 0001 0010 1001 0000 0010 1101 1110
-     * sign = 0
-     * Exponent = 10000010
-     :_read_correction_coef     * Mantissa = 1010010000001011011110
-     *
-     * V = (-1)^s * ((1.0) + M*2^-23) * 2^(E-127)
-     */
+	/* IEEE 754 single - Precision Floating-point format
+	 *
+	 * 31 bit : sign
+	 * 30 - 23 bit : exponent (8 bit)
+	 * 22 - 0  bit : fraction (23 bit)
+	 *
+	 * example
+	 * 0x41 0x29 0x02 0xDE
+	 * 0100 0001 0010 1001 0000 0010 1101 1110
+	 * sign = 0
+	 * Exponent = 10000010
+	 :_read_correction_coef     * Mantissa = 1010010000001011011110
+	 *
+	 * V = (-1)^s * ((1.0) + M*2^-23) * 2^(E-127)
+	 */
 
-    int16_t Sign = 0, C_A = 0;;
-    int16_t Exponent = 0;
-    int32_t Mantissa = 0;
-    float64 Exponent_result = 0.0;
-    float64 Fraction_result = 0.0, Decimal_Fraction = 0.0, ret_data;
+	int16_t Sign = 0, C_A = 0;;
+	int16_t Exponent = 0;
+	int32_t Mantissa = 0;
+	float64 Exponent_result = 0.0;
+	float64 Fraction_result = 0.0, Decimal_Fraction = 0.0, ret_data;
 
-    // First Step : sign
-    if(i_data & 0x80000000){   Sign = -1;   }   // Negative
-    else{                      Sign =  1;   }   // Positive
+	// First Step : sign
+	if (i_data & 0x80000000) {   Sign = -1;   } // Negative
 
-    // Second step : separation Exponent / Mantissa
-    Exponent = ((i_data & 0x7F800000) >> 23) & 0xFFFF;
-    Mantissa = ((i_data & 0x007FFFFF)      ) & 0xFFFFFF;
-    C_A      = Exponent - 127;
+	else {                      Sign =  1;   }  // Positive
 
-    // Third step : calculation
-    Exponent_result  = (float)(::pow(2,C_A));
-    Decimal_Fraction =  (float64)(::pow(2,-23));
-    Fraction_result  = (float64)(Mantissa * Decimal_Fraction);
-    ret_data = Sign * Exponent_result * (1 + Fraction_result);
+	// Second step : separation Exponent / Mantissa
+	Exponent = ((i_data & 0x7F800000) >> 23) & 0xFFFF;
+	Mantissa = ((i_data & 0x007FFFFF)) & 0xFFFFFF;
+	C_A      = Exponent - 127;
 
-    return ret_data;
+	// Third step : calculation
+	Exponent_result  = (float)(::pow(2, C_A));
+	Decimal_Fraction = (float64)(::pow(2, -23));
+	Fraction_result  = (float64)(Mantissa * Decimal_Fraction);
+	ret_data = Sign * Exponent_result * (1 + Fraction_result);
+
+	return ret_data;
 }
 
 
 int
 IPT_SPI::_init_pressure_channel(IPT_DEVICE ipt)
 {
-    // px4_arch_gpiowrite(SPI6_CS1_EXTERNAL2, 0);
-    // px4_arch_gpiowrite(SPI6_CS4_EXTERNAL2, 0);
-    px4_arch_gpiowrite(ipt_cs_gpio[ipt].pressure, 0);
-    px4_usleep(1000);
+	// px4_arch_gpiowrite(SPI6_CS1_EXTERNAL2, 0);
+	// px4_arch_gpiowrite(SPI6_CS4_EXTERNAL2, 0);
+	px4_arch_gpiowrite(ipt_cs_gpio[ipt].pressure, 0);
+	px4_usleep(1000);
 
-    // init press AD7799
-    uint8_t cmd_comm = 0x10;
-    _transfer(&cmd_comm, nullptr, 1);
-    px4_usleep(10);
+	// init press AD7799
+	uint8_t cmd_comm = 0x10;
+	_transfer(&cmd_comm, nullptr, 1);
+	px4_usleep(10);
 
 	uint8_t cmd_conf[2];
 	cmd_conf[0] = 0x10;
 	cmd_conf[1] = 0x20;
 	_transfer(cmd_conf, nullptr, sizeof(cmd_conf));
-    px4_usleep(10);
+	px4_usleep(10);
 
-    cmd_comm = 0x08;
-    _transfer(&cmd_comm, nullptr, 1);
-    px4_usleep(10);
+	cmd_comm = 0x08;
+	_transfer(&cmd_comm, nullptr, 1);
+	px4_usleep(10);
 
 	cmd_conf[0] = 0x30;
 	cmd_conf[1] = 0x01;
 	_transfer(cmd_conf, nullptr, sizeof(cmd_conf));
-    px4_usleep(10);
+	px4_usleep(10);
 
-    // px4_arch_gpiowrite(SPI6_CS1_EXTERNAL2, 1);
-    // px4_arch_gpiowrite(SPI6_CS4_EXTERNAL2, 1);
-    px4_arch_gpiowrite(ipt_cs_gpio[ipt].pressure, 1);
+	// px4_arch_gpiowrite(SPI6_CS1_EXTERNAL2, 1);
+	// px4_arch_gpiowrite(SPI6_CS4_EXTERNAL2, 1);
+	px4_arch_gpiowrite(ipt_cs_gpio[ipt].pressure, 1);
 
-    return OK;
+	return OK;
 }
 
 int
 IPT_SPI::_init_temperature_channel(IPT_DEVICE ipt)
 {
-    // px4_arch_gpiowrite(SPI6_CS2_EXTERNAL2, 0);
-    // px4_arch_gpiowrite(SPI6_CS5_EXTERNAL2, 0);
-    //px4_arch_gpiowrite(ipt_cs_gpio[ipt].temperature, 0);
-    px4_usleep(1000);
+	// px4_arch_gpiowrite(SPI6_CS2_EXTERNAL2, 0);
+	// px4_arch_gpiowrite(SPI6_CS5_EXTERNAL2, 0);
+	//px4_arch_gpiowrite(ipt_cs_gpio[ipt].temperature, 0);
+	px4_usleep(1000);
 
-    // init temperature AD7799
-    uint8_t cmd_comm = 0x20;
-    px4_arch_gpiowrite(ipt_cs_gpio[ipt].temperature, 0);
-    _transfer(&cmd_comm, nullptr, 1);
-    px4_arch_gpiowrite(ipt_cs_gpio[ipt].temperature, 1);
-    px4_usleep(10);
+	// init temperature AD7799
+	uint8_t cmd_comm = 0x20;
+	px4_arch_gpiowrite(ipt_cs_gpio[ipt].temperature, 0);
+	_transfer(&cmd_comm, nullptr, 1);
+	px4_arch_gpiowrite(ipt_cs_gpio[ipt].temperature, 1);
+	px4_usleep(10);
 
-    uint8_t cmd_filt = 0x03;
-    px4_arch_gpiowrite(ipt_cs_gpio[ipt].temperature, 0);
-    _transfer(&cmd_filt, nullptr, 1);
-    px4_arch_gpiowrite(ipt_cs_gpio[ipt].temperature, 1);
-    px4_usleep(10);
+	uint8_t cmd_filt = 0x03;
+	px4_arch_gpiowrite(ipt_cs_gpio[ipt].temperature, 0);
+	_transfer(&cmd_filt, nullptr, 1);
+	px4_arch_gpiowrite(ipt_cs_gpio[ipt].temperature, 1);
+	px4_usleep(10);
 
-    cmd_comm = 0x10;
-    px4_arch_gpiowrite(ipt_cs_gpio[ipt].temperature, 0);
-    _transfer(&cmd_comm, nullptr, 1);
-    px4_arch_gpiowrite(ipt_cs_gpio[ipt].temperature, 1);
-    px4_usleep(10);
+	cmd_comm = 0x10;
+	px4_arch_gpiowrite(ipt_cs_gpio[ipt].temperature, 0);
+	_transfer(&cmd_comm, nullptr, 1);
+	px4_arch_gpiowrite(ipt_cs_gpio[ipt].temperature, 1);
+	px4_usleep(10);
 
 	uint8_t cmd_mode = 0x80;
-    px4_arch_gpiowrite(ipt_cs_gpio[ipt].temperature, 0);
-    _transfer(&cmd_mode, nullptr, 1);
-    px4_arch_gpiowrite(ipt_cs_gpio[ipt].temperature, 1);
-    px4_usleep(10);
+	px4_arch_gpiowrite(ipt_cs_gpio[ipt].temperature, 0);
+	_transfer(&cmd_mode, nullptr, 1);
+	px4_arch_gpiowrite(ipt_cs_gpio[ipt].temperature, 1);
+	px4_usleep(10);
 
-    // px4_arch_gpiowrite(SPI6_CS2_EXTERNAL2, 1);
-    // px4_arch_gpiowrite(SPI6_CS5_EXTERNAL2, 1);
-    //px4_arch_gpiowrite(ipt_cs_gpio[ipt].temperature, 1);
+	// px4_arch_gpiowrite(SPI6_CS2_EXTERNAL2, 1);
+	// px4_arch_gpiowrite(SPI6_CS5_EXTERNAL2, 1);
+	//px4_arch_gpiowrite(ipt_cs_gpio[ipt].temperature, 1);
 
-    return OK;
+	return OK;
 }
 
 int
 IPT_SPI::_read_pressure_channel(IPT_DEVICE ipt)
 {
-    // px4_arch_gpiowrite(SPI6_CS1_EXTERNAL2, 0);
-    // px4_arch_gpiowrite(SPI6_CS4_EXTERNAL2, 0);
-    px4_arch_gpiowrite(ipt_cs_gpio[ipt].pressure, 0);
+	// px4_arch_gpiowrite(SPI6_CS1_EXTERNAL2, 0);
+	// px4_arch_gpiowrite(SPI6_CS4_EXTERNAL2, 0);
+	px4_arch_gpiowrite(ipt_cs_gpio[ipt].pressure, 0);
 	px4_usleep(10000); // 10ms
 
-    uint8_t cmd_comm = 0x58;
-    _transfer(&cmd_comm, nullptr, 1);
-    px4_usleep(10);
+	uint8_t cmd_comm = 0x58;
+	_transfer(&cmd_comm, nullptr, 1);
+	px4_usleep(10);
 
 	uint8_t cmd[3] = { 0, 0, 0 };
 	_transfer(nullptr, cmd, sizeof(cmd));
-    px4_usleep(10);
+	px4_usleep(10);
 
-    cmd_comm = 0x08;
-    _transfer(&cmd_comm, nullptr, 1);
-    px4_usleep(10);
+	cmd_comm = 0x08;
+	_transfer(&cmd_comm, nullptr, 1);
+	px4_usleep(10);
 
 	uint8_t cmd_conf[2];
-    cmd_conf[0] = 0x30;
+	cmd_conf[0] = 0x30;
 	cmd_conf[1] = 0x01;
 	_transfer(cmd_conf, nullptr, sizeof(cmd_conf));
 	px4_usleep(1000); // 1ms
 
-    // px4_arch_gpiowrite(SPI6_CS1_EXTERNAL2, 1);
-    // px4_arch_gpiowrite(SPI6_CS4_EXTERNAL2, 1);
-    px4_arch_gpiowrite(ipt_cs_gpio[ipt].pressure, 1);
+	// px4_arch_gpiowrite(SPI6_CS1_EXTERNAL2, 1);
+	// px4_arch_gpiowrite(SPI6_CS4_EXTERNAL2, 1);
+	px4_arch_gpiowrite(ipt_cs_gpio[ipt].pressure, 1);
 
 	printf("DEVICE %d PRESSURE BYTES: %x %x %x\n", ipt, cmd[0], cmd[1], cmd[2]);
-    uint32_t pressure = (cmd[0] << 16) | (cmd[1] << 8) | cmd[2];
+	uint32_t pressure = (cmd[0] << 16) | (cmd[1] << 8) | cmd[2];
 	printf("DEVICE %d PRESSURE RAW: %lu\n", ipt, (unsigned long)pressure);
 
-    return OK;
+	return OK;
 }
 
 int
 IPT_SPI::_read_temperature_channel(IPT_DEVICE ipt)
 {
-    // px4_arch_gpiowrite(SPI6_CS2_EXTERNAL2, 0);
-    // px4_arch_gpiowrite(SPI6_CS5_EXTERNAL2, 0);
-    px4_arch_gpiowrite(ipt_cs_gpio[ipt].temperature, 0);
+	// px4_arch_gpiowrite(SPI6_CS2_EXTERNAL2, 0);
+	// px4_arch_gpiowrite(SPI6_CS5_EXTERNAL2, 0);
+	px4_arch_gpiowrite(ipt_cs_gpio[ipt].temperature, 0);
 	px4_usleep(100000); // 100ms
 
-    uint8_t cmd_comm = 0x38;
-    _transfer(&cmd_comm, nullptr, 1);
+	uint8_t cmd_comm = 0x38;
+	_transfer(&cmd_comm, nullptr, 1);
 
 	uint8_t cmd[2] = { 0, 0 };
 	_transfer(nullptr, cmd, sizeof(cmd));
 
-    cmd_comm = 0x10;
-    _transfer(&cmd_comm, nullptr, 1);
+	cmd_comm = 0x10;
+	_transfer(&cmd_comm, nullptr, 1);
 
 	uint8_t cmd_mode = 0x80;
 	_transfer(&cmd_mode, nullptr, 1);
 	px4_usleep(1000); // 1ms
 
-    // px4_arch_gpiowrite(SPI6_CS2_EXTERNAL2, 1);
-    // px4_arch_gpiowrite(SPI6_CS5_EXTERNAL2, 1);
-    px4_arch_gpiowrite(ipt_cs_gpio[ipt].temperature, 1);
+	// px4_arch_gpiowrite(SPI6_CS2_EXTERNAL2, 1);
+	// px4_arch_gpiowrite(SPI6_CS5_EXTERNAL2, 1);
+	px4_arch_gpiowrite(ipt_cs_gpio[ipt].temperature, 1);
 
 	printf("DEVICE %d TEMPERATURE BYTES: %x %x\n", ipt, cmd[0], cmd[1]);
-    uint16_t temperature = (cmd[0] << 8) | cmd[1];
+	uint16_t temperature = (cmd[0] << 8) | cmd[1];
 	printf("DEVICE %d TEMPERATURE RAW: %lu\n", ipt, (unsigned long)temperature);
 
-    return OK;
+	return OK;
 }
 
 
 uint8_t
 IPT_SPI::_read_eeprom(IPT_DEVICE ipt, uint8_t addr)
 {
-    // px4_arch_gpiowrite(SPI6_CS3_EXTERNAL2, 0);
-    px4_arch_gpiowrite(ipt_cs_gpio[ipt].eeprom, 0);
+	// px4_arch_gpiowrite(SPI6_CS3_EXTERNAL2, 0);
+	px4_arch_gpiowrite(ipt_cs_gpio[ipt].eeprom, 0);
 	px4_usleep(1); // 1us
 
-    uint8_t cmd_comm = 0x03;
-    _transfer(&cmd_comm, nullptr, 1);
+	uint8_t cmd_comm = 0x03;
+	_transfer(&cmd_comm, nullptr, 1);
 
 	uint8_t _addr = addr;
-    _transfer(&_addr, nullptr, 1);
+	_transfer(&_addr, nullptr, 1);
 
 	uint8_t data;
 	_transfer(nullptr, &data, 1);
 	px4_usleep(10); // 10us
 
-    // px4_arch_gpiowrite(SPI6_CS3_EXTERNAL2, 1);
-    px4_arch_gpiowrite(ipt_cs_gpio[ipt].eeprom, 1);
-    return data;
+	// px4_arch_gpiowrite(SPI6_CS3_EXTERNAL2, 1);
+	px4_arch_gpiowrite(ipt_cs_gpio[ipt].eeprom, 1);
+	return data;
 }
 
 uint16_t
@@ -550,9 +559,9 @@ IPT_SPI::_reg16(unsigned reg)
 int
 IPT_SPI::_transfer(uint8_t *send, uint8_t *recv, unsigned len)
 {
-    int ret;
+	int ret;
 
-    ret = transfer(send, recv, len);
+	ret = transfer(send, recv, len);
 
 	return ret;
 }
