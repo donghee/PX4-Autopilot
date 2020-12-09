@@ -155,8 +155,6 @@ protected:
 	int32_t			_TEMP;
 	int64_t			_OFF;
 	int64_t			_SENS;
-	float			_P;
-	float			_T;
 
 	orb_advert_t		_baro_topic;
 	int			_orb_class_instance;
@@ -653,7 +651,7 @@ int
 IPT::collect()
 {
 	int ret;
-	uint32_t raw;
+	ipt::ipt_s raw;
 
 	perf_begin(_sample_perf);
 
@@ -672,12 +670,11 @@ IPT::collect()
 	}
 
 	/* pressure calculation, result in Pa */
-	int32_t P = (((raw * _SENS) >> 21) - _OFF) >> 15;
-	_P = P * 0.01f;
-	_T = _TEMP * 0.01f;
+	float P = (float)(raw.PS_PSI * 6894.76);
+	float T = (float)raw.PS_TEMP;
 
 	/* generate a new report */
-	report.temperature = _TEMP / 100.0f;
+	report.temperature = T / 100.0f;
 	report.pressure = P / 100.0f;		/* convert to millibar */
 
 	/* return device ID */

@@ -49,31 +49,68 @@ namespace ipt
  */
 #pragma pack(push,1)
 
+
 typedef struct {
-	float64 A;
-	float64 A1, A2, A3, A4, A5, A6;
-	float64 B1, B2, B3, B4, B5, B6;
-	float64 C1, C2, C3, C4, C5, C6;
-	float64 D1, D2, D3, D4, D5, D6;
-	float64 E1, E2, E3, E4, E5, E6;
-	float64 FA1, FA2, FA3, FA4, FA5, FA6;
-	float64 G1, G2, G3, G4;
+	float A;
+	float A1, A2, A3, A4, A5, A6;
+	float B1, B2, B3, B4, B5, B6;
+	float C1, C2, C3, C4, C5, C6;
+	float D1, D2, D3, D4, D5, D6;
+	float E1, E2, E3, E4, E5, E6;
+	float FA1, FA2, FA3, FA4, FA5, FA6;
+	float G1, G2, G3, G4;
 } coef_s;
 
 typedef struct {
-	float64 PT_PSI, PS_PSI;
-	float64 PT_TEMP, PS_TEMP;
-	float64 PT_inHg, PS_inHg;
-	float64 BARO_ALT, BARO_SPD;
-} ipt_s;
+	float A;
+	float A1, A2, A3, A4, A5, A6;
+	float B1, B2, B3, B4, B5, B6;
+	float C1, C2, C3, C4, C5, C6;
+	float D1, D2, D3, D4, D5, D6;
+	float E1, E2, E3, E4, E5, E6;
+	float FA1, FA2, FA3, FA4, FA5, FA6;
+} p_coef_s;
 
+typedef struct {
+	float G1, G2, G3, G4;
+} t_coef_s;
+
+typedef struct {
+	float A;
+	float A1, A2, A3, A4, A5, A6;
+	float B1, B2, B3, B4, B5, B6;
+	float C1, C2, C3, C4, C5, C6;
+	float D1, D2, D3, D4, D5, D6;
+	float E1, E2, E3, E4, E5, E6;
+	float FA1, FA2, FA3, FA4, FA5, FA6;
+	float FS;
+	int8_t MIN_OPER, MAX_OPER, MIN_STOR, MAX_STOR;
+	uint32_t PMIN, PMAX;
+	int16_t MIN_TOUT, MAX_TOUT;
+	uint8_t ALGO_TYPE, DATE_MONTH, DATE_DAY, DATE_YEAR;
+	uint32_t SERIAL_NO, HON_PN;
+	uint8_t CHECKSUM1[4];
+	float G1, G2, G3, G4;
+	uint32_t SPC;
+	uint32_t STC;
+	float CSP;
+	uint8_t CHECKSUM2[2];
+} prom_s;
+
+typedef struct {
+	double PT_PSI, PS_PSI;
+	double PT_TEMP, PS_TEMP;
+	double PT_inHg, PS_inHg;
+	double BARO_ALT, BARO_SPD;
+} ipt_s;
 
 /**
  * Grody hack for crc4()
  */
 union prom_u {
-	uint32_t b[82];
-	coef_s s;
+	uint8_t b[(54) * 4];
+	uint32_t w[54];
+	prom_s s;
 };
 #pragma pack(pop)
 
