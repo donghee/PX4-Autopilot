@@ -316,10 +316,13 @@ IPT_SPI::_measure()
 	ipt0_temperature = (double) _read_temperature_channel(IPT0) / (double)65535.0;
 	ipt1_temperature = (double) _read_temperature_channel(IPT1) / (double)65535.0;
 
-	_ipt_correction(IPT0, ipt0_pressure, ipt1_pressure, ipt0_temperature, ipt1_temperature);
+	_ipt_correction(IPT0, ipt1_pressure, ipt0_pressure, ipt1_temperature, ipt0_temperature);
+	_ipt_correction(IPT1, ipt1_pressure, ipt0_pressure, ipt1_temperature, ipt0_temperature);
 
 	printf("PS PSI CALIBRATED: %9.6f\n", IPT_DATA.PS_PSI);
 	printf("PT PSI CALIBRATED: %9.6f\n", IPT_DATA.PT_PSI);
+	printf("PS TEMPERATURE: %9.6f\n", IPT_DATA.PS_TEMP);
+	printf("PT TEMPERATURE: %9.6f\n", IPT_DATA.PT_TEMP);
 
 	IPT_DATA.PS_inHg = IPT_DATA.PS_PSI * 2.03602;
 	IPT_DATA.PT_inHg = IPT_DATA.PT_PSI * 2.03602;
