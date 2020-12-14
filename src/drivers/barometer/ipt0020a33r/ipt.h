@@ -41,6 +41,15 @@
 #define IOCTL_RESET			2
 #define IOCTL_MEASURE			3
 
+/*
+ * Maximum internal conversion time for OSR 1024 is 2.28 ms. We set an update
+ * rate of 100Hz which is be very safe not to read the ADC before the
+ * conversion finished
+ */
+#define IPT_CONVERSION_INTERVAL	10000	/* microseconds */
+#define IPT_MEASUREMENT_RATIO	10	/* pressure measurements per temperature measurement */
+#define IPT_BARO_DEVICE_PATH_EXT	"/dev/ipt_ext"
+
 namespace ipt
 {
 

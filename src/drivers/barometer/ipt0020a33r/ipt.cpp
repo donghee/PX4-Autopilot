@@ -89,38 +89,6 @@ enum IPT_BUS {
 /* helper macro for arithmetic - returns the square of the argument */
 #define POW2(_x)		((_x) * (_x))
 
-/*
- * IPT/MS5607 internal constants and data structures.
- */
-#define ADDR_CMD_CONVERT_D1_OSR256		0x40	/* write to this address to start pressure conversion */
-#define ADDR_CMD_CONVERT_D1_OSR512		0x42	/* write to this address to start pressure conversion */
-#define ADDR_CMD_CONVERT_D1_OSR1024		0x44	/* write to this address to start pressure conversion */
-#define ADDR_CMD_CONVERT_D1_OSR2048		0x46	/* write to this address to start pressure conversion */
-#define ADDR_CMD_CONVERT_D1_OSR4096		0x48	/* write to this address to start pressure conversion */
-#define ADDR_CMD_CONVERT_D2_OSR256		0x50	/* write to this address to start temperature conversion */
-#define ADDR_CMD_CONVERT_D2_OSR512		0x52	/* write to this address to start temperature conversion */
-#define ADDR_CMD_CONVERT_D2_OSR1024		0x54	/* write to this address to start temperature conversion */
-#define ADDR_CMD_CONVERT_D2_OSR2048		0x56	/* write to this address to start temperature conversion */
-#define ADDR_CMD_CONVERT_D2_OSR4096		0x58	/* write to this address to start temperature conversion */
-
-/*
-  use an OSR of 1024 to reduce the self-heating effect of the
-  sensor. Information from MS tells us that some individual sensors
-  are quite sensitive to this effect and that reducing the OSR can
-  make a big difference
- */
-#define ADDR_CMD_CONVERT_D1			ADDR_CMD_CONVERT_D1_OSR1024
-#define ADDR_CMD_CONVERT_D2			ADDR_CMD_CONVERT_D2_OSR1024
-
-/*
- * Maximum internal conversion time for OSR 1024 is 2.28 ms. We set an update
- * rate of 100Hz which is be very safe not to read the ADC before the
- * conversion finished
- */
-// #define IPT_CONVERSION_INTERVAL	10000	/* microseconds */
-#define IPT_CONVERSION_INTERVAL	1000000	/* microseconds */
-#define IPT_MEASUREMENT_RATIO	3	/* pressure measurements per temperature measurement */
-#define IPT_BARO_DEVICE_PATH_EXT	"/dev/ipt_ext"
 
 class IPT : public cdev::CDev
 {
@@ -150,11 +118,6 @@ protected:
 	enum IPT_DEVICE_TYPES _device_type;
 	bool			_collect_phase;
 	unsigned		_measure_phase;
-
-	/* intermediate temperature values per IPT/MS5607 datasheet */
-	int32_t			_TEMP;
-	int64_t			_OFF;
-	int64_t			_SENS;
 
 	orb_advert_t		_baro_topic;
 	int			_orb_class_instance;
@@ -230,9 +193,6 @@ IPT::IPT(device::Device *interface, ipt::prom_u &prom_buf, const char *path,
 	_device_type(device_type),
 	_collect_phase(false),
 	_measure_phase(0),
-	_TEMP(0),
-	_OFF(0),
-	_SENS(0),
 	_baro_topic(nullptr),
 	_orb_class_instance(-1),
 	_class_instance(-1),
@@ -268,7 +228,6 @@ int
 IPT::init()
 {
 	int ret;
-	bool autodetect = false;
 
 	ret = CDev::init();
 
@@ -294,11 +253,7 @@ IPT::init()
 	_measure_phase = 0;
 	_reports->flush();
 
-	if (_device_type == IPT_DEVICE) {
-		autodetect = true;
-		/* try first with IPT and fallback to MS5607 */
-		_device_type = IPT_DEVICE;
-	}
+    _device_type = IPT_DEVICE;
 
 
 	while (true) {
@@ -331,24 +286,6 @@ IPT::init()
 		/* state machine will have generated a report, copy it out */
 		_reports->get(&brp);
 
-		if (autodetect) {
-			if (_device_type == IPT_DEVICE) {
-				if (brp.pressure < 520.0f) {
-					/* This is likely not this device, try again */
-					_device_type = IPTXXXX_DEVICE;
-					_measure_phase = 0;
-
-					continue;
-				}
-
-			} else if (_device_type == IPTXXXX_DEVICE) {
-				if (brp.pressure < 520.0f) {
-					/* Both devices returned a very low pressure;
-					 * have fun on Everest using IPT */
-					_device_type = IPT_DEVICE;
-				}
-			}
-		}
 
 		switch (_device_type) {
 		default:
@@ -572,11 +509,6 @@ IPT::cycle()
 
 			/* issue a reset command to the sensor */
 			_interface->ioctl(IOCTL_RESET, dummy);
-			/* reset the collection state machine and try again - we need
-			 * to wait 2.8 ms after issuing the sensor reset command
-			 * according to the IPT datasheet
-			 */
-			start_cycle(USEC2TICK(2800));
 			return;
 		}
 
@@ -674,7 +606,7 @@ IPT::collect()
 	float T = (float)raw.PS_TEMP;
 
 	/* generate a new report */
-	report.temperature = T / 100.0f;
+	report.temperature = T;
 	report.pressure = P / 100.0f;		/* convert to millibar */
 
 	/* return device ID */
@@ -706,7 +638,7 @@ IPT::print_info()
 	perf_print_counter(_comms_errors);
 	printf("poll interval:  %u ticks\n", _measure_ticks);
 	_reports->print_info("report queue");
-	printf("device:         %s\n", _device_type == IPT_DEVICE ? "ipt" : "ms5607");
+	printf("device:         %s\n", "ipt");
 
 	sensor_baro_s brp = {};
 	_reports->get(&brp);

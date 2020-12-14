@@ -143,12 +143,6 @@ private:
 	int     _read_serial_number(IPT_DEVICE ipt);
 	int     _read_prom(IPT_DEVICE ipt);
 
-	/**
-	 * Read a 16-bit register value.
-	 *
-	 * @param reg		The register to read.
-	 */
-	uint16_t	_reg16(unsigned reg);
 
 	/**
 	 * Wrapper around transfer() that prevents interrupt-context transfers
@@ -167,7 +161,7 @@ IPT_spi_interface(ipt::prom_u &prom_buf, uint8_t busnum)
 
 IPT_SPI::IPT_SPI(uint8_t bus, uint32_t device, ipt::prom_u &prom_buf) :
 	// SPI("IPT_SPI", nullptr, bus, device, SPIDEV_MODE3, 20 * 1000 * 1000 /* will be rounded to 10 MHz */),
-	SPI("IPT_SPI", nullptr, bus, device, SPIDEV_MODE3, 1 * 1000 * 1000 /* will be rounded to 1 MHz */),
+	SPI("IPT_SPI", nullptr, bus, device, SPIDEV_MODE3, 2 * 1000 * 1000 /* will be rounded to 1 MHz */),
 	_prom(prom_buf)
 {
 }
@@ -253,7 +247,7 @@ IPT_SPI::read(unsigned offset, void *data, unsigned count)
 	cvt->PT_PSI = IPT_DATA.PT_PSI;
 	cvt->PS_PSI = IPT_DATA.PS_PSI;
 	cvt->PT_TEMP = IPT_DATA.PT_TEMP;
-	cvt->PS_PSI = IPT_DATA.PS_PSI;
+	cvt->PS_TEMP = IPT_DATA.PS_TEMP;
 
 	cvt->PT_inHg = IPT_DATA.PT_inHg;
 	cvt->PS_inHg = IPT_DATA.PS_inHg;
@@ -306,28 +300,35 @@ int
 IPT_SPI::_measure()
 {
 	double ipt0_pressure, ipt1_pressure;
-	double ipt0_temperature, ipt1_temperature;
-	double ADC_alt, ADC_vel, IPT_inHg;
+	static double ipt0_temperature, ipt1_temperature;
+	double IPT_inHg;
 	int tmp;
+
+    static uint8_t read_temp_count = 0;
 
 	ipt0_pressure = (double) _read_pressure_channel(IPT0) / (double)16777215.0;
 	ipt1_pressure = (double) _read_pressure_channel(IPT1) / (double)16777215.0;
 
-	ipt0_temperature = (double) _read_temperature_channel(IPT0) / (double)65535.0;
-	ipt1_temperature = (double) _read_temperature_channel(IPT1) / (double)65535.0;
+    // read temperatures every 10 measures
+    if (read_temp_count % IPT_MEASUREMENT_RATIO == 0) {
+        ipt0_temperature = (double) _read_temperature_channel(IPT0) / (double)65535.0;
+        ipt1_temperature = (double) _read_temperature_channel(IPT1) / (double)65535.0;
+        read_temp_count = 0;
+    }
+    read_temp_count = read_temp_count + 1;
 
 	_ipt_correction(IPT0, ipt1_pressure, ipt0_pressure, ipt1_temperature, ipt0_temperature);
 	_ipt_correction(IPT1, ipt1_pressure, ipt0_pressure, ipt1_temperature, ipt0_temperature);
 
-	printf("PS PSI CALIBRATED: %9.6f\n", IPT_DATA.PS_PSI);
-	printf("PT PSI CALIBRATED: %9.6f\n", IPT_DATA.PT_PSI);
-	printf("PS TEMPERATURE: %9.6f\n", IPT_DATA.PS_TEMP);
-	printf("PT TEMPERATURE: %9.6f\n", IPT_DATA.PT_TEMP);
+	// printf("PS PSI CALIBRATED: %9.6f\n", IPT_DATA.PS_PSI);
+	// printf("PT PSI CALIBRATED: %9.6f\n", IPT_DATA.PT_PSI);
+	// printf("PS TEMPERATURE: %9.6f\n", IPT_DATA.PS_TEMP);
+	// printf("PT TEMPERATURE: %9.6f\n", IPT_DATA.PT_TEMP);
 
 	IPT_DATA.PS_inHg = IPT_DATA.PS_PSI * 2.03602;
 	IPT_DATA.PT_inHg = IPT_DATA.PT_PSI * 2.03602;
 
-	ADC_alt = IPT_DATA.BARO_ALT = ((1.909029114 - pow(IPT_DATA.PS_inHg, 0.190255)) / 0.000013125214) * 0.3048;
+	IPT_DATA.BARO_ALT = ((1.909029114 - pow(IPT_DATA.PS_inHg, 0.190255)) / 0.000013125214) * 0.3048;
 
 	tmp = IPT_DATA.PT_PSI - IPT_DATA.PS_PSI;
 
@@ -336,10 +337,10 @@ IPT_SPI::_measure()
 	// PSI to inhg : 1 PSI to 2.03602 inHg
 	IPT_inHg = (tmp) * 2.03602;
 	// Knot to Km/h coefficient is 1.852
-	ADC_vel = IPT_DATA.BARO_SPD = (1479.1026 * sqrt(pow((IPT_inHg / 29.92126 + 1.0), 0.285714286) - 1.0)) * 1.852;
+	IPT_DATA.BARO_SPD = (1479.1026 * sqrt(pow((IPT_inHg / 29.92126 + 1.0), 0.285714286) - 1.0)) * 1.852;
 
-	printf("Altitude: %9.6f\n", ADC_alt);
-	printf("Velocity: %9.6f\n", ADC_vel);
+	// printf("Altitude: %9.6f\n", IPT_DATA.BARO_ALT);
+	// printf("Velocity: %9.6f\n", IPT_DATA_BARO_SPD);
 
 	return OK;
 }
@@ -546,7 +547,7 @@ uint32_t
 IPT_SPI::_read_pressure_channel(IPT_DEVICE ipt)
 {
 	px4_arch_gpiowrite(ipt_cs_gpio[ipt].pressure, 0);
-	px4_usleep(10000); // 10ms
+	// px4_usleep(10000); // 10ms
 
 	uint8_t cmd_comm = 0x58;
 	_transfer(&cmd_comm, nullptr, 1);
@@ -564,7 +565,7 @@ IPT_SPI::_read_pressure_channel(IPT_DEVICE ipt)
 	cmd_conf[0] = 0x30;
 	cmd_conf[1] = 0x01;
 	_transfer(cmd_conf, nullptr, sizeof(cmd_conf));
-	px4_usleep(1000); // 1ms
+	// px4_usleep(1000); // 1ms
 
 	px4_arch_gpiowrite(ipt_cs_gpio[ipt].pressure, 1);
 
@@ -579,7 +580,7 @@ uint16_t
 IPT_SPI::_read_temperature_channel(IPT_DEVICE ipt)
 {
 	px4_arch_gpiowrite(ipt_cs_gpio[ipt].temperature, 0);
-	px4_usleep(100000); // new temperature value will be available in ~100ms
+	// px4_usleep(100000); // new temperature value will be available in ~100ms
 
 	uint8_t cmd_comm = 0x38;
 	_transfer(&cmd_comm, nullptr, 1);
@@ -592,7 +593,7 @@ IPT_SPI::_read_temperature_channel(IPT_DEVICE ipt)
 
 	uint8_t cmd_mode = 0x80;
 	_transfer(&cmd_mode, nullptr, 1);
-	px4_usleep(1000); // 1ms
+	// px4_usleep(1000); // 1ms
 
 	px4_arch_gpiowrite(ipt_cs_gpio[ipt].temperature, 1);
 
@@ -624,15 +625,6 @@ IPT_SPI::_read_eeprom(IPT_DEVICE ipt, uint8_t addr)
 	return data;
 }
 
-uint16_t
-IPT_SPI::_reg16(unsigned reg)
-{
-	uint8_t cmd[3] = { 0, 0, 0 };
-
-	_transfer(cmd, cmd, sizeof(cmd));
-
-	return (uint16_t)(cmd[1] << 8) | cmd[2];
-}
 
 int
 IPT_SPI::_transfer(uint8_t *send, uint8_t *recv, unsigned len)
