@@ -133,6 +133,7 @@ private:
 	 * @return		OK if the PROM reads successfully.
 	 */
 	int     _init_pressure_channel(IPT_DEVICE ipt);
+	int     _reset_channel(IPT_DEVICE ipt);
 	int     _init_temperature_channel(IPT_DEVICE ipt);
 
 	int _ipt_correction(IPT_DEVICE ipt, double PT_PSI, double PS_PSI, double PT_TEMP, double PS_TEMP);
@@ -160,8 +161,7 @@ IPT_spi_interface(ipt::prom_u &prom_buf, uint8_t busnum)
 }
 
 IPT_SPI::IPT_SPI(uint8_t bus, uint32_t device, ipt::prom_u &prom_buf) :
-	// SPI("IPT_SPI", nullptr, bus, device, SPIDEV_MODE3, 20 * 1000 * 1000 /* will be rounded to 10 MHz */),
-	SPI("IPT_SPI", nullptr, bus, device, SPIDEV_MODE3, 2 * 1000 * 1000 /* will be rounded to 1 MHz */),
+	SPI("IPT_SPI", nullptr, bus, device, SPIDEV_MODE3, 1 * 1000 * 1000 /* will be rounded to 1 MHz */),
 	_prom(prom_buf)
 {
 }
@@ -195,7 +195,14 @@ IPT_SPI::init()
 	_read_prom(IPT0);
 	_read_prom(IPT1);
 
-	ret = _init_pressure_channel(IPT0);
+	for (int i = 0 ; i < 10; i++) {
+		ret = _init_pressure_channel(IPT0);
+		px4_usleep(20);
+		ret = _reset_channel(IPT0);
+		px4_usleep(20);
+		ret = _init_pressure_channel(IPT0);
+		px4_usleep(20);
+	}
 
 	if (ret != OK) {
 		PX4_DEBUG("pressure channel init failed");
@@ -203,6 +210,7 @@ IPT_SPI::init()
 	}
 
 	px4_usleep(1000);
+
 	ret = _init_temperature_channel(IPT0);
 
 	if (ret != OK) {
@@ -212,7 +220,14 @@ IPT_SPI::init()
 
 	px4_usleep(1000);
 
-	ret = _init_pressure_channel(IPT1);
+	for (int i = 0 ; i < 10; i++) {
+		ret = _init_pressure_channel(IPT1);
+		px4_usleep(20);
+		ret = _reset_channel(IPT1);
+		px4_usleep(20);
+		ret = _init_pressure_channel(IPT1);
+		px4_usleep(20);
+	}
 
 	if (ret != OK) {
 		PX4_DEBUG("pressure channel init failed");
@@ -304,26 +319,27 @@ IPT_SPI::_measure()
 	double IPT_inHg;
 	int tmp;
 
-    static uint8_t read_temp_count = 0;
+	static uint8_t read_temp_count = 0;
 
 	ipt0_pressure = (double) _read_pressure_channel(IPT0) / (double)16777215.0;
 	ipt1_pressure = (double) _read_pressure_channel(IPT1) / (double)16777215.0;
 
-    // read temperatures every 10 measures
-    if (read_temp_count % IPT_MEASUREMENT_RATIO == 0) {
-        ipt0_temperature = (double) _read_temperature_channel(IPT0) / (double)65535.0;
-        ipt1_temperature = (double) _read_temperature_channel(IPT1) / (double)65535.0;
-        read_temp_count = 0;
-    }
-    read_temp_count = read_temp_count + 1;
+	// read temperatures every 10 measures
+	if (read_temp_count % IPT_MEASUREMENT_RATIO == 0) {
+		ipt0_temperature = (double) _read_temperature_channel(IPT0) / (double)65535.0;
+		ipt1_temperature = (double) _read_temperature_channel(IPT1) / (double)65535.0;
+		read_temp_count = 0;
+	}
+
+	read_temp_count = read_temp_count + 1;
 
 	_ipt_correction(IPT0, ipt1_pressure, ipt0_pressure, ipt1_temperature, ipt0_temperature);
 	_ipt_correction(IPT1, ipt1_pressure, ipt0_pressure, ipt1_temperature, ipt0_temperature);
 
-	// printf("PS PSI CALIBRATED: %9.6f\n", IPT_DATA.PS_PSI);
-	// printf("PT PSI CALIBRATED: %9.6f\n", IPT_DATA.PT_PSI);
-	// printf("PS TEMPERATURE: %9.6f\n", IPT_DATA.PS_TEMP);
-	// printf("PT TEMPERATURE: %9.6f\n", IPT_DATA.PT_TEMP);
+	printf("PS PSI CALIBRATED: %9.6f\n", IPT_DATA.PS_PSI);
+	printf("PT PSI CALIBRATED: %9.6f\n", IPT_DATA.PT_PSI);
+	printf("PS TEMPERATURE: %9.6f\n", IPT_DATA.PS_TEMP);
+	printf("PT TEMPERATURE: %9.6f\n", IPT_DATA.PT_TEMP);
 
 	IPT_DATA.PS_inHg = IPT_DATA.PS_PSI * 2.03602;
 	IPT_DATA.PT_inHg = IPT_DATA.PT_PSI * 2.03602;
@@ -339,8 +355,8 @@ IPT_SPI::_measure()
 	// Knot to Km/h coefficient is 1.852
 	IPT_DATA.BARO_SPD = (1479.1026 * sqrt(pow((IPT_inHg / 29.92126 + 1.0), 0.285714286) - 1.0)) * 1.852;
 
-	// printf("Altitude: %9.6f\n", IPT_DATA.BARO_ALT);
-	// printf("Velocity: %9.6f\n", IPT_DATA_BARO_SPD);
+	printf("Altitude: %9.6f\n", IPT_DATA.BARO_ALT);
+	printf("Velocity: %9.6f\n", IPT_DATA.BARO_SPD);
 
 	return OK;
 }
@@ -437,6 +453,28 @@ IPT_SPI::_init_pressure_channel(IPT_DEVICE ipt)
 	px4_arch_gpiowrite(ipt_cs_gpio[ipt].pressure, 0);
 	px4_usleep(1000);
 
+	uint8_t cmd_conf[6];
+	cmd_conf[0] = 0x10;
+	cmd_conf[1] = 0x10;
+	cmd_conf[2] = 0x20;
+	cmd_conf[3] = 0x08;
+	cmd_conf[4] = 0x30;
+	cmd_conf[5] = 0x01;
+	_transfer(cmd_conf, nullptr, sizeof(cmd_conf));
+	px4_usleep(10);
+
+	px4_arch_gpiowrite(ipt_cs_gpio[ipt].pressure, 1);
+
+	return OK;
+}
+
+/*
+int
+IPT_SPI::_init_pressure_channel(IPT_DEVICE ipt)
+{
+	px4_arch_gpiowrite(ipt_cs_gpio[ipt].pressure, 0);
+	px4_usleep(1000);
+
 	// init press AD7799
 	uint8_t cmd_comm = 0x10;
 	_transfer(&cmd_comm, nullptr, 1);
@@ -461,6 +499,29 @@ IPT_SPI::_init_pressure_channel(IPT_DEVICE ipt)
 
 	return OK;
 }
+*/
+
+
+int
+IPT_SPI::_reset_channel(IPT_DEVICE ipt)
+{
+	px4_arch_gpiowrite(ipt_cs_gpio[ipt].pressure, 0);
+	px4_usleep(1000);
+
+	uint8_t cmd_conf[4];
+	cmd_conf[0] = 0xff;
+	cmd_conf[1] = 0xff;
+	cmd_conf[2] = 0xff;
+	cmd_conf[3] = 0xff;
+	_transfer(cmd_conf, nullptr, sizeof(cmd_conf));
+	px4_usleep(10);
+
+	px4_arch_gpiowrite(ipt_cs_gpio[ipt].pressure, 1);
+
+	return OK;
+}
+
+
 
 int
 IPT_SPI::_init_temperature_channel(IPT_DEVICE ipt)
@@ -569,9 +630,9 @@ IPT_SPI::_read_pressure_channel(IPT_DEVICE ipt)
 
 	px4_arch_gpiowrite(ipt_cs_gpio[ipt].pressure, 1);
 
-	// printf("DEVICE %d PRESSURE BYTES: %x %x %x\n", ipt, cmd[0], cmd[1], cmd[2]);
+	printf("DEVICE %d PRESSURE BYTES: %x %x %x\n", ipt, cmd[0], cmd[1], cmd[2]);
 	uint32_t pressure = (cmd[0] << 16) | (cmd[1] << 8) | cmd[2];
-	// printf("DEVICE %d PRESSURE RAW: %lu\n", ipt, (unsigned long)pressure);
+	printf("DEVICE %d PRESSURE RAW: %lu\n", ipt, (unsigned long)pressure);
 
 	return pressure;
 }
