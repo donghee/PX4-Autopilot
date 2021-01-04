@@ -48,17 +48,6 @@ using namespace time_literals;
 
 #define DIM0_DEVICE_PATH "/dev/dim"
 
-/**
- * DIM: KSE DIM SPI Driver constroctor
- *
- * @param bus_option       SPI bus option
- * @param bus       SPI bus
- * @param device       device pin map
- * @param bus_frequency       SPI bus frequency hz
- * @param spi_mode       SPI mode
- * @param drdy_gpio       SPI data ready pin
- * @return          DIM object
- */
 DIM::DIM(I2CSPIBusOption bus_option, int bus, int32_t device, int bus_frequency,
 	 spi_mode_e spi_mode, spi_drdy_gpio_t drdy_gpio) :
 	SPI(0xA0, MODULE_NAME, bus, device, spi_mode, bus_frequency),
@@ -71,10 +60,6 @@ DIM::DIM(I2CSPIBusOption bus_option, int bus, int32_t device, int bus_frequency,
 	_class_instance = - 1;
 }
 
-/**
- * DIM: KSE DIM SPI Driver deconstroctor
- *
- */
 DIM::~DIM()
 {
 	if (_class_instance != -1) {
@@ -86,10 +71,6 @@ DIM::~DIM()
 	perf_free(_bad_transfers);
 }
 
-
-/**
- * SPI bus initialize, make device file. (like a "/dev/dim0")
- */
 
 int
 DIM::init()
@@ -107,19 +88,11 @@ DIM::init()
 	return PX4_OK;
 }
 
-/**
- * Reset driver module, inherite from PX4 Driver Class
- */
-
 int DIM::reset()
 {
 	return OK;
 }
 
-/**
- * KSE DIM Power On
- * @return          success(0) or fail(-1) of power on
- */
 int DIM::power_on()
 {
 	// Power ON
@@ -170,10 +143,6 @@ int DIM::power_on()
 	return OK;
 }
 
-/**
- * KSE DIM Power off
- * @return          success(0) or fail(-1) of power off
- */
 int DIM::power_off()
 {
 	// Power OFF
@@ -226,10 +195,6 @@ DIM::probe()
 }
 
 
-/**
- * encrypt and decrypt test DIM
- * @return          success(0) or fail(-1) of test
- */
 int
 DIM::encrypt_self_test()
 {
@@ -305,13 +270,6 @@ DIM::encrypt_self_test()
 	return OK;
 }
 
-/**
- * encrypt and decrypt test on file using DIM
- * @param file_name       file name where encrpted data store
- * @param _plain_text       input data
- * @param count       byte size of input data
- * @return          success(0) or fail(-1) of test
- */
 int
 DIM::encrypt_test(const char *file_name, uint8_t *_plain_text, size_t count)
 {
@@ -405,10 +363,6 @@ DIM::encrypt_test(const char *file_name, uint8_t *_plain_text, size_t count)
 	return PX4_OK;
 }
 
-/**
- * DIM Driver daemon start
- * @return          success(0) or fail(-1) of start daemon
- */
 void
 DIM::start()
 {
@@ -422,10 +376,6 @@ DIM::start()
 	//    ScheduleOnInterval((1_s / DIM_DEFAULT_RATE), 10000);
 }
 
-/**
- * DIM Driver daemon stop
- * @return          success(0) or fail(-1) of stop daemon
- */
 void
 DIM::stop()
 {
@@ -443,25 +393,12 @@ DIM::stop()
 	}
 }
 
-/**
- * open file operator for DIM Driver file interface ("/dev/dim0")
- * @param filep       file path to open
- * @return          success(0) or fail(-1) of file open
- */
 int
 DIM::open(struct file *filep)
 {
 	// printf("open_first\n");
 	return CDev::open_first(filep);
 }
-
-/**
- * ioctl file operator ("/dev/dim0")
- * @param filp       file descriptor
- * @param cmd       command (DIM_ENCRYPT, DIM_DECRYPT, DIM_MAVLINK_ENCRYPT, DIM_IS_POWER_ON)
- * @param arg       argument of command
- * @return          success(0) or fail(-1) of file ioctl
- */
 int
 DIM::ioctl(device::file_t *filp, int cmd, unsigned long arg)
 {
@@ -497,10 +434,6 @@ DIM::ioctl(device::file_t *filp, int cmd, unsigned long arg)
 	return ret;
 }
 
-/**
- * exit and DIM power off
- * @return          success(0) or fail(-1) of exit
- */
 void
 DIM::exit_and_cleanup()
 {
@@ -519,20 +452,12 @@ DIM::exit_and_cleanup()
 	I2CSPIDriverBase::exit_and_cleanup();
 }
 
-/**
- * Module interface.
- * @return          success(0) or fail(-1) of file exit
- */
 void
 DIM::RunImpl()
 {
 	measure();
 }
 
-/**
- * execute main loop
- * @return          success(0) or fail(-1) of file exit
- */
 int
 DIM::measure()
 {
@@ -562,10 +487,6 @@ DIM::measure()
 	return OK;
 }
 
-/**
- * current SPI Bus status
- * @return
- */
 void
 DIM::print_status()
 {
@@ -574,12 +495,6 @@ DIM::print_status()
 	perf_print_counter(_bad_transfers);
 }
 
-/**
- * random number generator using DIM
- * @param pbRandom       output of random number generator
- * @param usRandomSize       input random number size
- * @return          success(0) or fail(-1) of random number
- */
 int16_t
 DIM::_kcmvpDrbg(uint8_t *pbRandom, uint16_t usRandomSize)
 {
@@ -640,23 +555,6 @@ DIM::_kcmvpDrbg(uint8_t *pbRandom, uint16_t usRandomSize)
 	return OK;
 }
 
-/**
- * encrypt or decrypt using DIM
- * @param pbOutput       output data
- * @param pbInput        input data
- * @param usInputSize        input data size
- * @param bKeyType        key type: if bAlg is KCMVP_AES <KCMVP_AES_128_KEY('40'), KCMVP_AES_128_KEY('41'), if bAlg is KCMVP_ARIA <KCMVP_AES_128_KEY('42')> or KCMVP_ARIA128_KEY('50'), KCMVP_ARIA192_KEY('51') KCMVP_ARIA256_KEY('52') >
- * @param usKeyIndex        encryption key index stored on DIM (0~7)
- * @param pbIv        Iv Buffer
- * @param usIvSize    size of Iv buffer
- * @param pbAuth      auth buffer
- * @param usAuthSize  size of Auth buffer
- * @param pbTag       tag buffer
- * @param usTagSize   size of tag buffer
- * @param bEnDe       < ENCRYPT(0) or DECRYPT(1) >
- * @param bAlg        < KCMVP_AES('40') or KCMVP_ARIA('50') >
- * @return          success(0) or fail(-1) of encryption or decryption
- */
 int16_t
 DIM::_kcmvpGcm(uint8_t *pbOutput, uint8_t *pbInput, uint16_t usInputSize,
 	       uint8_t bKeyType, uint16_t usKeyIndex, uint8_t *pbIv,
@@ -917,11 +815,6 @@ DIM::_kcmvpGcm(uint8_t *pbOutput, uint8_t *pbInput, uint16_t usInputSize,
 	return OK;
 }
 
-/**
- * DIM Driver daemon command interface
- * @param cli       argument of command
- * @return
- */
 void
 DIM::custom_method(const BusCLIArguments &cli)
 {
