@@ -35,6 +35,7 @@
 #define DEBUG_FLOAT_ARRAY_HPP
 
 #include <uORB/topics/debug_array.h>
+#include <uORB/topics/encapsulated_data.h>
 
 class MavlinkStreamDebugFloatArray : public MavlinkStream
 {
@@ -49,34 +50,52 @@ public:
 
 	unsigned get_size() override
 	{
-		return _debug_array_sub.advertised() ? MAVLINK_MSG_ID_DEBUG_FLOAT_ARRAY_LEN + MAVLINK_NUM_NON_PAYLOAD_BYTES : 0;
+		return _encapsulated_data_sub.advertised() ? MAVLINK_MSG_ID_ENCAPSULATED_DATA_LEN + MAVLINK_NUM_NON_PAYLOAD_BYTES : 0;
 	}
 
 private:
 	explicit MavlinkStreamDebugFloatArray(Mavlink *mavlink) : MavlinkStream(mavlink) {}
 
-	uORB::Subscription _debug_array_sub{ORB_ID(debug_array)};
+	// uORB::Subscription _debug_array_sub{ORB_ID(debug_array)};
+	uORB::Subscription _encapsulated_data_sub{ORB_ID(encapsulated_data)};
 
 	bool send() override
 	{
-		debug_array_s debug;
+		encapsulated_data_s data;
 
-		if (_debug_array_sub.update(&debug)) {
-			mavlink_debug_float_array_t msg{};
+		if (_encapsulated_data_sub.update(&data)) {
+			mavlink_encapsulated_data_t msg{};
 
-			msg.time_usec = debug.timestamp;
-			msg.array_id = debug.id;
-			memcpy(msg.name, debug.name, sizeof(msg.name));
-			msg.name[sizeof(msg.name) - 1] = '\0'; // enforce null termination
 
-			for (size_t i = 0; i < debug_array_s::ARRAY_SIZE; i++) {
-				msg.data[i] = debug.data[i];
+			msg.seqnr = 0;
+			// memcpy(msg.data, debug.data, 58*4);
+
+			for (size_t i = 0; i < 128; i++) {
+				msg.data[i] = data.data[i];
 			}
 
-			mavlink_msg_debug_float_array_send_struct(_mavlink->get_channel(), &msg);
+			mavlink_msg_encapsulated_data_send_struct(_mavlink->get_channel(), &msg);
+
+			msg.seqnr = 1;
+
+			for (size_t i = 128; i < 256; i++) {
+				msg.data[i - 128] = data.data[i];
+			}
+
+			mavlink_msg_encapsulated_data_send_struct(_mavlink->get_channel(), &msg);
+
+			msg.seqnr = 2;
+
+			for (size_t i = 0; i < (16 + 128 + 16); i++) {
+				msg.data[i] = data.data[256 + i];
+			}
+
+			mavlink_msg_encapsulated_data_send_struct(_mavlink->get_channel(), &msg);
+
 
 			return true;
 		}
+
 
 		return false;
 	}
