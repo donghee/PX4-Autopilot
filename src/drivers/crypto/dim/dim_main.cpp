@@ -107,6 +107,11 @@ extern "C" int dim_main(int argc, char *argv[])
 		return ThisDriver::module_custom_method(cli, iterator);
 	}
 
+	if (!strcmp(verb, "key")) {
+		cli.custom1 = 5;
+		return ThisDriver::module_custom_method(cli, iterator);
+	}
+
 	if (!strcmp(verb, "mavlink")) {
 		typedef struct {
 			const char *filepath;

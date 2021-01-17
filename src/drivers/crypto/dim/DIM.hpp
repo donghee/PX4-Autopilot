@@ -13,8 +13,9 @@
 #include <uORB/topics/vehicle_global_position.h>
 #include <uORB/topics/home_position.h>
 #include <uORB/topics/vehicle_air_data.h>
-
-
+#include <uORB/Publication.hpp>
+#include <uORB/topics/debug_array.h>
+#include <uORB/topics/encapsulated_data.h>
 /**
  * \class DIM
  * \brief DIM SPI Driver for encryption or decryption using DIM Hardware
@@ -97,6 +98,9 @@ public:
 			  uint16_t usIvSize, uint8_t *pbAuth, uint16_t usAuthSize,
 			  uint8_t *pbTag, uint16_t usTagSize, uint8_t bEnDe,
 			  uint8_t bAlg);
+
+	int16_t	_kcmvpGetKey(uint8_t *pbKey, uint16_t *pusKeySize, uint8_t bKeyType,
+			     uint16_t usKeyIndex);
 
 	/**
 	 * DIM Driver daemon command interface
@@ -272,10 +276,17 @@ private:
 	 */
 	int        encrypt_test(const char *file_name, uint8_t *_plain_text, size_t count);
 
+	int        encrypt_test2();
+
+	int        getKey();
+
 	uORB::Subscription _lpos_sub{ORB_ID(vehicle_local_position)};
 	uORB::Subscription _gpos_sub{ORB_ID(vehicle_global_position)};
 	uORB::Subscription _home_sub{ORB_ID(home_position)};
 	uORB::Subscription _air_data_sub{ORB_ID(vehicle_air_data)};
+
+	uORB::Publication<debug_array_s>			_debug_array_pub {ORB_ID(debug_array)};
+	uORB::Publication<encapsulated_data_s>			_encapsulated_data_pub {ORB_ID(encapsulated_data)};
 
 	int			_class_instance;
 

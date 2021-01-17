@@ -360,6 +360,45 @@ DIM::encrypt_test(const char *file_name, uint8_t *_plain_text, size_t count)
 	}
 
 	printf("\r\n");
+
+	// Send Encrypt TEXT to Onboard using MAVLink
+	// encapsulated_data
+	encapsulated_data_s data_topic{};
+	data_topic.timestamp = hrt_absolute_time();
+	data_topic.seqnr = 0;
+	memcpy(data_topic.data, encrypted_text, 256);
+	memcpy(data_topic.data + 256, abIv, 16);
+	memcpy(data_topic.data + 256 + 16, abAuth, 128);
+	memcpy(data_topic.data + 256 + 16 + 128, abTag, 16);
+	_encapsulated_data_pub.publish(data_topic);
+
+	return PX4_OK;
+}
+
+int
+DIM::getKey()
+{
+	int ret;
+
+	// get key 0
+	uint8_t abPubKey0[64];
+	uint16_t usSize0 = 0;
+	memset(&abPubKey0, 0, sizeof(abPubKey0));
+	ret = _kcmvpGetKey(abPubKey0, &usSize0, KCMVP_ARIA128_KEY, 0);
+
+	if (ret < 0) {
+		printf("Error kcmvpGetKey: %d\n", ret);
+	}
+
+	printf("kcmvpGetKey Size: %d\n", usSize0);
+	printf("kcmvpGetKey: \n");
+
+	for (int i = 0; i < usSize0; i++) {
+		printf("%02X", abPubKey0[i]);
+	}
+
+	printf("\r\n");
+
 	return PX4_OK;
 }
 
@@ -421,6 +460,7 @@ DIM::ioctl(device::file_t *filp, int cmd, unsigned long arg)
 	case DIM_MAVLINK_ENCRYPT:
 		printf("Save MAVLink #33 message on SD\r\n");
 		ret = encrypt_test(((file_io_t *) arg)->filepath, ((file_io_t *) arg)->buffer, 256);
+		// ret = 0;
 		break;
 
 	case DIM_IS_POWER_ON:
@@ -815,6 +855,68 @@ DIM::_kcmvpGcm(uint8_t *pbOutput, uint8_t *pbInput, uint16_t usInputSize,
 	return OK;
 }
 
+int16_t
+DIM::_kcmvpGetKey(uint8_t *pbKey, uint16_t *pusKeySize, uint8_t bKeyType,
+		  uint16_t usKeyIndex)
+{
+	int16_t sRv;
+
+	// Check KSE power state.
+	if (!is_power_on) {
+		return -1;
+	}
+
+	// Check input.
+	if ((pusKeySize == NULL_PTR) ||
+	    ((bKeyType != KCMVP_AES128_KEY) && (bKeyType != KCMVP_AES192_KEY) &&
+	     (bKeyType != KCMVP_AES256_KEY) && (bKeyType != KCMVP_ARIA128_KEY) &&
+	     (bKeyType != KCMVP_ARIA192_KEY) && (bKeyType != KCMVP_ARIA256_KEY) &&
+	     (bKeyType != KCMVP_HMAC_KEY) && (bKeyType != KCMVP_ECDSA_PRI_KEY) &&
+	     (bKeyType != KCMVP_ECDSA_PUB_KEY) &&
+	     (bKeyType != KCMVP_ECDH_PRI_KEY) &&
+	     (bKeyType != KCMVP_ECDH_PUB_KEY)) ||
+	    (usKeyIndex >= MAX_KCMVP_KEY_COUNT)) {
+		return -1;
+	}
+
+	memset(&dim_cmd, 0x00, sizeof(dim_cmd));
+	memset(&dim_report, 0x00, sizeof(dim_report));
+
+	// request 0
+	dim_cmd.stx = 0xa5;
+	dim_cmd.dir = 0x05;
+	// dim_cmd.dir = 0xFE;
+	dim_cmd.offset = 0;
+	dim_cmd.len = 2 + 3; // ?
+	// dim_cmd.msgid = ((uint16_t)(0x02) << 8) | 0x02; // 0x0202 lsb
+	dim_cmd.msg[0] = 0x02;
+	dim_cmd.msg[1] = 0x02;
+	dim_cmd.data[0] = bKeyType;
+	dim_cmd.data[1] = (uint8_t)(usKeyIndex >> 8);
+	dim_cmd.data[2] = (uint8_t)(usKeyIndex);
+
+	// -----------
+	transfer((uint8_t *)&dim_cmd, nullptr, sizeof(dim_cmd));
+	px4_usleep(T_STALL);
+	// And response
+	transfer(nullptr, (uint8_t *)&dim_report, sizeof(dim_report));
+	px4_usleep(T_STALL);
+
+	// printf("%02X %02X %02X ", dim_report.stx, dim_report.dir, dim_report.offset);
+	// printf("%02X %02X %02X: ", dim_report.len, dim_report.data[0], dim_report.data[1]);
+	// printf("%02X %02X %02X \n", dim_report.data[0], dim_report.data[1], dim_report.data[2]);
+	sRv = (int16_t)(((uint16_t)dim_report.data[0] << 8) |
+			((uint16_t)dim_report.data[1]));
+
+	for (int i = 0; i < (dim_report.len - 2); i++) {
+		pbKey[i] = dim_report.data[i + 2];
+	}
+
+	*pusKeySize = dim_report.len - 2;
+
+	return sRv;
+}
+
 void
 DIM::custom_method(const BusCLIArguments &cli)
 {
@@ -844,5 +946,11 @@ DIM::custom_method(const BusCLIArguments &cli)
 	case 4:
 		encrypt_self_test();
 		break;
+
+	case 5:
+		getKey();
+		break;
+
+
 	}
 }

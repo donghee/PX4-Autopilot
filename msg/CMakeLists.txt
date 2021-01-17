@@ -173,6 +173,7 @@ if(NOT px4_constrained_flash_build)
 		debug_key_value.msg
 		debug_value.msg
 		debug_vect.msg
+		encapsulated_data.msg
 	)
 endif()
 
