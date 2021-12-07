@@ -531,9 +531,19 @@
 #define GPIO_INPUT_CAP3        /* PB11 */ GPIO_TIM2_CH4_IN
 
 /* PWM input driver. Use FMU AUX5 pins attached to timer4 channel 2 */
-#define PWMIN_TIMER                       4
-#define PWMIN_TIMER_CHANNEL    /* T4C2 */ 2
-#define GPIO_PWM_IN            /* PD13 */ GPIO_TIM4_CH2IN
+//#define PWMIN_TIMER                       4
+//#define PWMIN_TIMER_CHANNEL    /* T4C2 */ 2
+//#define GPIO_PWM_IN            /* PD13 */ GPIO_TIM4_CH2IN
+
+// CAP1
+//#define PWMIN_TIMER                       2
+//#define PWMIN_TIMER_CHANNEL    /* T4C4 */ 1
+//#define GPIO_PWM_IN            /* PB11 */ GPIO_TIM2_CH1_IN
+
+// CAP2
+#define PWMIN_TIMER                       2
+#define PWMIN_TIMER_CHANNEL    /* T4C4 */ 2
+#define GPIO_PWM_IN            /* PB11 */ GPIO_TIM2_CH2_IN
 
 /* Shared pins Both FMU and PX4IO control/monitor
  * FMU Initializes these pins to passive input until it is known

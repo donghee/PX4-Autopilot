@@ -241,6 +241,8 @@ public:
 	void print_info(void);
 	void hard_reset();
 
+	void _timer_init(void);
+
 private:
 	uint32_t _error_count;
 	uint32_t _pulses_captured;
@@ -254,12 +256,13 @@ private:
 	hrt_call _hard_reset_call;	/* HRT callout for note completion */
 	hrt_call _freeze_test_call;	/* HRT callout for note completion */
 
-	void _timer_init(void);
 
 	void _turn_on();
 	void _turn_off();
 	void _freeze_test();
 
+	pwm_input_s _pwm_input = {};
+	orb_advert_t	_pwm_input_pub{nullptr};
 };
 
 static int pwmin_tim_isr(int irq, void *context, void *arg);
@@ -307,6 +310,8 @@ PWMIN::init()
 	if (_reports == nullptr) {
 		return -ENOMEM;
 	}
+
+	_pwm_input_pub = orb_advertise(ORB_ID(pwm_input), &_pwm_input);
 
 	/* Schedule freeze check to invoke periodically */
 	hrt_call_every(&_freeze_test_call, 0, TIMEOUT_POLL, reinterpret_cast<hrt_callout>(&PWMIN::_freeze_test), this);
@@ -487,6 +492,7 @@ PWMIN::read(struct file *filp, char *buffer, size_t buflen)
  */
 void PWMIN::publish(uint16_t status, uint32_t period, uint32_t pulse_width)
 {
+
 	/* if we missed an edge, we have to give up */
 	if (status & SR_OVF_PWMIN) {
 		_error_count++;
@@ -501,6 +507,7 @@ void PWMIN::publish(uint16_t status, uint32_t period, uint32_t pulse_width)
 	pwmin_report.period = period;
 	pwmin_report.pulse_width = pulse_width;
 
+	orb_publish(ORB_ID(pwm_input), _pwm_input_pub, &pwmin_report);
 	_reports->force(&pwmin_report);
 }
 
@@ -551,6 +558,7 @@ static void pwmin_start()
 
 	g_dev = new PWMIN();
 
+
 	if (g_dev == nullptr) {
 		errx(1, "driver allocation failed");
 	}
@@ -558,6 +566,8 @@ static void pwmin_start()
 	if (g_dev->init() != OK) {
 		errx(1, "driver init failed");
 	}
+
+	g_dev->_timer_init();
 
 	exit(0);
 }
