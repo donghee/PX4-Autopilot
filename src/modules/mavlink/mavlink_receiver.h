@@ -188,6 +188,9 @@ private:
 	void handle_message_named_value_float(mavlink_message_t *msg);
 #endif // !CONSTRAINED_FLASH
 
+	void handle_message_auth_key(mavlink_message_t *msg);
+        void handle_message_encapsulated_data(mavlink_message_t *msg);
+
 	void CheckHeartbeats(const hrt_abstime &t, bool force = false);
 
 	void Run();

@@ -4,6 +4,7 @@
 #define DIM_ENCRYPT 0
 #define DIM_DECRYPT 1
 #define DIM_MAVLINK_ENCRYPT 2
+#define DIM_MAVLINK_DECRYPT 3
 #define DIM_IS_POWER_ON 4
 
 //// KSE DIM ///////////////////////////////////////////////////////////////////
@@ -375,13 +376,44 @@ DIM::encrypt_test(const char *file_name, uint8_t *_plain_text, size_t count)
 	return PX4_OK;
 }
 
+
+int
+DIM::decrypt_test(uint8_t *_encrypted_text, size_t count)
+{
+	uint8_t encrypted_text[256], plain_text[256], abIv[16], abAuth[128], abTag[16];
+
+	memcpy(encrypted_text, _encrypted_text, 256);
+	memcpy(abIv, _encrypted_text + 256, 16);
+	memcpy(abAuth, _encrypted_text + 256 + 16, 128);
+	memcpy(abTag, _encrypted_text + 256 + 16 + 128, 16);
+
+	// ARIA (0x50) Decrypt
+	memset(&plain_text, 0, sizeof(plain_text));
+	_kcmvpGcm(plain_text, encrypted_text, 256, KCMVP_ARIA128_KEY, 0, abIv, 16,
+		  abAuth, 128, abTag, 16, DECRYPT, 0x50);
+	printf("  * Read Encrypted Data from GCS and Decrypt it \r\n    ");
+
+	for (int i = 0; i < 256; i++) {
+		printf("%02X", plain_text[i]);
+
+		if ((i < 255) && ((i + 1) % 32 == 0)) {
+			printf("\r\n    ");
+		}
+	}
+
+	printf("\r\n");
+
+	return PX4_OK;
+}
+
+
 int
 DIM::getKey()
 {
 	int ret;
 
 	// get key 0
-	uint8_t abPubKey0[64];
+	uint8_t abPubKey0[16];
 	uint16_t usSize0 = 0;
 	memset(&abPubKey0, 0, sizeof(abPubKey0));
 	ret = _kcmvpGetKey(abPubKey0, &usSize0, KCMVP_ARIA128_KEY, 0);
@@ -462,6 +494,13 @@ DIM::ioctl(device::file_t *filp, int cmd, unsigned long arg)
 		ret = encrypt_test(((file_io_t *) arg)->filepath, ((file_io_t *) arg)->buffer, 256);
 		// ret = 0;
 		break;
+
+	case DIM_MAVLINK_DECRYPT:
+		printf("Received MAVLink #33 message from GCS\r\n");
+		ret = decrypt_test((uint8_t*) arg, 512);
+		// ret = 0;
+		break;
+
 
 	case DIM_IS_POWER_ON:
 		ret = is_power_on;

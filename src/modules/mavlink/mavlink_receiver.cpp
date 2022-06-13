@@ -277,6 +277,14 @@ MavlinkReceiver::handle_message(mavlink_message_t *msg)
 		break;
 #endif // !CONSTRAINED_FLASH
 
+	case MAVLINK_MSG_ID_AUTH_KEY:
+		handle_message_auth_key(msg);
+		break;
+
+	case MAVLINK_MSG_ID_ENCAPSULATED_DATA:
+		handle_message_encapsulated_data(msg);
+		break;
+
 	default:
 		break;
 	}
@@ -2771,6 +2779,71 @@ MavlinkReceiver::handle_message_debug_float_array(mavlink_message_t *msg)
 	_debug_array_pub.publish(debug_topic);
 }
 #endif // !CONSTRAINED_FLASH
+
+void
+MavlinkReceiver::handle_message_auth_key(mavlink_message_t *msg)
+{
+	mavlink_auth_key_t auth_key_msg;
+	mavlink_auth_key_t ack_auth_key_msg;
+	mavlink_msg_auth_key_decode(msg, &auth_key_msg);
+
+	printf("Verify AUTH KEY\r\n");
+	printf("GCS AUTH KEY:\r\n");
+	for (size_t i = 0; i < 16; i++) {
+		printf("%x ", auth_key_msg.key[i]);
+	}
+	printf("\r\n");
+
+	uint8_t dim_key[16] = {0x03, 0x10, 0x81, 0x8A, 0x36, 0xE2, 0xCB, 0x32, 0x0A, 0xFD, 0x92, 0xEC, 0xE3, 0x52, 0x3D, 0x1A};
+	memcpy(ack_auth_key_msg.key, dim_key, 16);
+
+	printf("FC AUTH KEY:\r\n");
+	for (size_t i = 0; i < 16; i++) {
+		printf("%x ", ack_auth_key_msg.key[i]);
+	}
+	printf("\r\n");
+
+	param_t param = param_find_no_notification("CBRK_IO_SAFETY");
+    int32_t value = 0; // Disable CBRK IO SAFETY
+
+	if (memcmp(auth_key_msg.key, dim_key, sizeof(dim_key)) == 0) {
+	    printf("AUTH KEY is matched\r\n");
+        value = 22027; // If match DIM Auth key, Enable CBRK IO SAFETY
+	} else {
+	    printf("AUTH KEY is not matched\r\n");
+    }
+
+	param_set(param, &value); // Enable, Disable CBRK IO SAFETY
+
+	mavlink_msg_auth_key_send_struct(_mavlink->get_channel(), &ack_auth_key_msg);
+}
+
+void
+MavlinkReceiver::handle_message_encapsulated_data(mavlink_message_t *msg)
+{
+	static uint8_t encrypted_text[512] = {};
+
+	mavlink_encapsulated_data_t encapsulated_data_msg;
+	mavlink_msg_encapsulated_data_decode(msg, &encapsulated_data_msg);
+
+	if (encapsulated_data_msg.seqnr == 0)
+	    	memcpy(&(encrypted_text), encapsulated_data_msg.data, 128);
+	if (encapsulated_data_msg.seqnr == 1)
+	    	memcpy(&(encrypted_text[128]), encapsulated_data_msg.data, 128);
+	if (encapsulated_data_msg.seqnr == 2) {
+	    	memcpy(&(encrypted_text[256]), encapsulated_data_msg.data, 16+128+16);
+
+	  	int fd = px4_open("/dev/dim0", O_RDWR);
+
+	  	if (fd < 0) {
+			PX4_ERR("can't open DIM device");
+			return;
+	  	}
+
+	  	px4_ioctl(fd, 3, (long unsigned int) &encrypted_text);
+	  	px4_close(fd);
+	}
+}
 
 void
 MavlinkReceiver::handle_message_onboard_computer_status(mavlink_message_t *msg)

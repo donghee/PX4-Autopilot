@@ -276,6 +276,8 @@ private:
 	 */
 	int        encrypt_test(const char *file_name, uint8_t *_plain_text, size_t count);
 
+	int        decrypt_test(uint8_t *_encrypted_text, size_t count);
+
 	int        encrypt_test2();
 
 	int        getKey();
