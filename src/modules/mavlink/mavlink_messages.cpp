@@ -2574,7 +2574,7 @@ protected:
 		int fd = px4_open("/dev/dim0", O_RDWR);
 
 		if (fd < 0) {
-			PX4_ERR("can't open DIM device");
+			// PX4_ERR("can't open DIM device");
 			return -1;
 		}
 
@@ -2633,9 +2633,9 @@ protected:
 
 			mavlink_msg_global_position_int_send_struct(_mavlink->get_channel(), &msg);
 
-			// printf("mavlink channel %d\n", _mavlink->get_channel());
+			printf("DIM: mavlink channel %d\n", _mavlink->get_channel());
 			// SAVE MAVLINK #33 USING DIM
-			if (_mavlink->get_channel() == 0) {
+			if (_mavlink->get_channel() == 1) { // send to mavlink chan: #1
 				uint8_t send_buffer[36];
 				mavlink_message_t message;
 				mavlink_msg_global_position_int_pack(0, 0, &message, msg.time_boot_ms, msg.lat, msg.lon, msg.alt, msg.relative_alt,

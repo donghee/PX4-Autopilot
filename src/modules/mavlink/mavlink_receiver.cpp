@@ -70,6 +70,8 @@
 #define MAVLINK_RECEIVER_NET_ADDED_STACK 0
 #endif
 
+#include <drivers/drv_pwm_output.h>
+
 using matrix::wrap_2pi;
 
 MavlinkReceiver::~MavlinkReceiver()
@@ -2787,6 +2789,8 @@ MavlinkReceiver::handle_message_auth_key(mavlink_message_t *msg)
 	mavlink_auth_key_t ack_auth_key_msg;
 	mavlink_msg_auth_key_decode(msg, &auth_key_msg);
 
+	int fd = px4_open("/dev/pwm_output0", 0);
+
 	printf("Verify AUTH KEY\r\n");
 	printf("GCS AUTH KEY:\r\n");
 	for (size_t i = 0; i < 16; i++) {
@@ -2804,16 +2808,18 @@ MavlinkReceiver::handle_message_auth_key(mavlink_message_t *msg)
 	printf("\r\n");
 
 	param_t param = param_find_no_notification("CBRK_IO_SAFETY");
-    int32_t value = 0; // Disable CBRK IO SAFETY
+  int32_t value = 0; // Disable CBRK IO SAFETY
+	param_set(param, &value);
 
 	if (memcmp(auth_key_msg.key, dim_key, sizeof(dim_key)) == 0) {
-	    printf("AUTH KEY is matched\r\n");
-        value = 22027; // If match DIM Auth key, Enable CBRK IO SAFETY
-	} else {
-	    printf("AUTH KEY is not matched\r\n");
-    }
+	  px4_ioctl(fd, PWM_SERVO_SET_FORCE_SAFETY_OFF, 0);
+	  printf("AUTH KEY is matched\r\n");
+  } else {
+	  px4_ioctl(fd, PWM_SERVO_SET_FORCE_SAFETY_ON, 0);
+	  printf("AUTH KEY is not matched\r\n");
+  }
 
-	param_set(param, &value); // Enable, Disable CBRK IO SAFETY
+  px4_close(fd);
 
 	mavlink_msg_auth_key_send_struct(_mavlink->get_channel(), &ack_auth_key_msg);
 }
