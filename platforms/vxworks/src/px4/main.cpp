@@ -1,5 +1,11 @@
 #include <stdio.h>
 //#include "hello.hpp"
+
+//#define _STD_BEGIN namespace std {
+//#define _STD_END   }
+//#define _CSTD      std::
+//#undef _STD_USING
+// #undef _GLOBAL_USING
 #include <mathlib/mathlib.h>
 
 #include <string>
@@ -18,6 +24,7 @@
 #include <sys/mman.h>
 #endif
 
+#include <px4_platform_common/defines.h>
 #include <px4_platform_common/time.h>
 #include <px4_platform_common/log.h>
 #include <px4_platform_common/init.h>
@@ -100,6 +107,7 @@ int SITL_MAIN(int argc, char **argv)
 int px4_main(int argc, char **argv)
 #endif
 {
+	printf("Start PX4 On VxWorks");
 	printf("%f\n", math::signNoZero(-123.456f));
 
 	bool is_client = false;
@@ -192,6 +200,7 @@ int px4_main(int argc, char **argv)
 		const char *myoptarg = nullptr;
 
 		while ((ch = px4_getopt(argc, argv, "hdt:s:i:w:", &myoptind, &myoptarg)) != EOF) {
+				printf(" donghee-1");
 			switch (ch) {
 			case 'h':
 				print_usage();
@@ -237,6 +246,7 @@ int px4_main(int argc, char **argv)
 			PX4_INFO("instance: %i", instance);
 		}
 
+	printf(" donghee-1");
 #if defined(PX4_BINARY_DIR)
 
 		// data_path & working_directory: if no commands specified or in current working directory),
@@ -251,6 +261,7 @@ int px4_main(int argc, char **argv)
 		}
 
 #endif // PX4_BINARY_DIR
+	printf("donghee0+");
 
 #if defined(PX4_SOURCE_DIR)
 
@@ -261,10 +272,12 @@ int px4_main(int argc, char **argv)
 
 #endif // PX4_SOURCE_DIR
 
+	printf("donghee0");
 		if (commands_file.empty()) {
 			commands_file = "etc/init.d-posix/rcS";
 		}
 
+	printf("donghee1");
 		// change the CWD befre setting up links and other directories
 		if (!working_directory.empty()) {
 
@@ -281,6 +294,7 @@ int px4_main(int argc, char **argv)
 			}
 		}
 
+	printf("donghee2");
 		ret = get_server_running(instance, &server_is_running);
 
 		if (ret != PX4_OK) {
@@ -288,18 +302,21 @@ int px4_main(int argc, char **argv)
 			return ret;
 		}
 
+	printf("donghee3");
 		if (server_is_running) {
 			// allow running multiple instances, but the server is only started for the first
 			PX4_INFO("PX4 server already running for instance %i", instance);
 			return PX4_ERROR;
 		}
 
+	printf("donghee4");
 		ret = create_symlinks_if_needed(data_path);
 
 		if (ret != PX4_OK) {
 			return ret;
 		}
 
+	printf("donghee5");
 		if (test_data_path != "") {
 			const std::string required_test_data_path = "./test_data";
 
