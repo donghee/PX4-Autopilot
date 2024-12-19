@@ -1,0 +1,10 @@
+
+
+{
+		"fields": "\u0089 timestamp;\u008a speed;\u008a yaw_rate;\u008c closed_loop_speed_control;\u008c closed_loop_yaw_rate_control;\u0086[6] _padding0;",
+		"fields_total_length": 132,
+		"orb_ids": [40, 39],
+		"main_orb_id": 40,
+		"dependencies": [],
+		"name": "px4/DifferentialDriveSetpoint"
+}
