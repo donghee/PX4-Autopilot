@@ -1,1 +1,0 @@
-./watch_ian ../src/* - './wr_build.sh'
