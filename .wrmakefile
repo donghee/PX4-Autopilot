@@ -1,0 +1,146 @@
+# Makefile -- Wrapper for running cmake from Workbench user-defined (Makefile) projects
+# Copyright (c) 2016-2018, 2020 Wind River Systems, Inc. All Rights Reserved.
+#
+# This wrapper allows creating a Wind River Workbench user-defined
+# (Makefile) project with multiple build-specs, such that switching
+# the buildspec allows compiling for different platforms using cmake.
+# The CMakeCache.txt is generated on demand as needed. Multiple build
+# targets can be invoked (all|clean|rebuild|test|...)
+#
+# This must be used from a Wind River environment, i.e. WIND_HOME and
+# related environment variables must be set (by default in Workbench).
+# The following make macros *must* be passed from command-line:
+# BUILD_SPEC  - build directory to use (subdir of the project)
+# SRCDIR      - source directory (relative to the builddir)
+# Additional buildspec-specific settings *may* be set as documented below.
+#
+# Usage Examples:
+# ---------------
+# $WIND_HOME/wrenv.linux -p vxworks-7
+# make BUILD_SPEC=simlinux SRCDIR=../../myproject \
+#   CMAKE_TOOLCHAIN_FILE=/path/to/vsb/cmake/SIMLINUXgnu.cmake
+# make BUILD_SPEC=simnt SRCDIR=.. CMAKE_TOOLCHAIN_FILE=../mysim.cmake \
+#   "CMAKE=C:/Program Files/CMake/bin/cmake.exe" "CMAKE_GENERATOR=Eclipse CDT4 - Ninja"
+#
+# Optional Macros to set:
+# -----------------------
+# ADDED_ASMFLAGS   - Compiler flags to add for Asm only
+# ADDED_CXXFLAGS   - Compiler flags to add for C++ only
+# ADDED_CFLAGS     - Compiler flags to add for C only
+# ADDED_FLAGS      - Compiler flags (defines) to add for all languages
+# BUILD_ARGS       - Optional flags for the build, eg "-k 0"
+# CMAKE            - Path to a cmake executable (for choosing a version)
+# CMAKE_BUILD_TYPE - Empty or one of [Debug|Release]
+# CMAKE_GENERATOR  - Custom generator to use (eg Ninja)
+# CMAKE_OPTIONS    - Additional defines/options for cmake
+# CMAKE_TOOLCHAIN_FILE - "-D/path/to/toolchain.cmake"
+# CTEST_ARGS       - Optional flags for CTest, eg "-V -E pattern"
+# DEBUG            - Set to 1 to debug the build process.
+
+#
+# modification history
+# --------------------
+# 24feb20,ryan set MSYS2 path for default shipped cmake
+# 10Oct18,bfu  Set the var PRJDIR to PRJ_ROOT_DIR, not depend on CURDIR.
+# 28Dec17,ryan support sign step 
+# 28jun17,ryan replace the toolchain.cmake file under the buildspec folder
+# 19may17,ryan pass ide generated options to cmake
+# 18oct16,mob  written
+
+ifeq ($(WIND_HOST_TYPE),x86-win32)
+	VXWORKS_MSYS2_PATH := $(WIND_BASE)/host/msys2-x86-win64/usr/bin
+	export PATH := $(VXWORKS_MSYS2_PATH);$(PATH)
+endif
+
+%IDE_CMAKE_GENERATED%
+
+ifdef BDGEN_VSB_INCLUDE
+include $(BDGEN_VSB_INCLUDE)
+endif
+
+# Default Settings can be overridden via macros on command-line
+CMAKE := cmake
+ifeq ($(CMAKE_GENERATOR),)    # set CMAKE_GENERATOR to Unix Makefile if its is null
+CMAKE_GENERATOR:=Eclipse CDT4 - Unix Makefiles
+#CMAKE_GENERATOR := Eclipse CDT4 - Ninja
+endif
+
+# Default Directories, filled in by Workbench UI
+WIND_BASE:=$(subst \,/,$(WIND_BASE))
+WIND_HOME:=$(subst \,/,$(WIND_HOME))
+ifeq ($(PRJDIR),)    # Directory of the CMake Source
+PRJDIR:=$(PRJ_ROOT_DIR)
+endif
+ifeq ($(SRCDIR),)    # Directory of the CMake Source
+SRCDIR:=$(PRJDIR)
+endif
+BUILDDIR := $(CURDIR)/build
+
+# Option Processing
+ifeq ($(DEBUG),1)
+CMAKE_DBGOPT:=$(CMAKE_DBGOPT) --trace-expand
+endif
+
+CMAKE_TOOLCHAIN_FILE_ARG:=-DCMAKE_TOOLCHAIN_FILE=$(CURDIR)/toolchain.cmake
+
+# Default Rule
+default : all
+	@echo "Built default target: all"
+
+# We do a full clean in order to allow re-generating on rebuild.
+clean :
+	@echo "make: removing targets and objects of `pwd`"
+	rm -rf $(BUILDDIR) && mkdir -p $(BUILDDIR)
+
+.PHONY: default all clean rebuild help install rebuild_cache list_install_components test edit_cache generate
+
+# Force serialized rebuild
+rebuild :
+	$(MAKE) $(MFLAGS) clean
+	$(MAKE) $(MFLAGS) all
+
+all help install rebuild_cache list_install_components : generate
+	cd $(BUILDDIR) && "$(CMAKE)" --build . -- $(BUILD_ARGS) $@
+
+test : generate
+	cd $(BUILDDIR) && CTEST_OUTPUT_ON_FAILURE=1 "$(CMAKE)" --build . -- "ARGS=$(CTEST_ARGS)" $@
+
+# This one is put to background to allow UI Editing without build blocked
+edit_cache : generate
+	cd $(BUILDDIR) && "$(CMAKE)" --build . -- $@ &
+
+generate : $(BUILDDIR)/CMakeCache.txt
+	@echo "cmake: generated CMakeCache.txt"
+
+# CMake Generate Rule: Settings which are supposed to be the same across all
+# build configurations can be added directly here in the Makefile.
+# Settings to switch between buildspecs should be in the Workbench UI,
+# and will be passed as make macros on command-line. Additional
+# (temporary) overrides can be made from the Workbench Build Console.
+$(BUILDDIR)/CMakeCache.txt : $(SRCDIR)/CMakeLists.txt $(CURDIR)/Makefile
+	mkdir -p $(BUILDDIR) && cd $(BUILDDIR) && \
+	  _WRS_CONFIG_SECURE_LOADER=$(_WRS_CONFIG_SECURE_LOADER) \
+	  _WRS_CONFIG_SECURE_LOADER_STRIP=$(_WRS_CONFIG_SECURE_LOADER_STRIP) \
+	  _WRS_CONFIG_SECURE_LOADER_PRIVATE_SIGNING_KEY_FILE=$(_WRS_CONFIG_SECURE_LOADER_PRIVATE_SIGNING_KEY_FILE) \
+	  _WRS_CONFIG_SECURE_LOADER_PUBLIC_SIGNING_CERT_FILE=$(_WRS_CONFIG_SECURE_LOADER_PUBLIC_SIGNING_CERT_FILE) \
+	  _WRS_CONFIG_SECURE_LOADER_ENCRYPTION=$(_WRS_CONFIG_SECURE_LOADER_ENCRYPTION) \
+	  _WRS_CONFIG_SECURE_LOADER_KEP_SECRET=$(_WRS_CONFIG_SECURE_LOADER_KEP_SECRET) \
+	  _WRS_CONFIG_SECURE_LOADER_KEP_ID=$(_WRS_CONFIG_SECURE_LOADER_KEP_ID) \
+	  _WRS_CONFIG_SECURE_LOADER_CIPHER_AES_256_CTR=$(_WRS_CONFIG_SECURE_LOADER_CIPHER_AES_256_CTR) \
+	  _WRS_CONFIG_SECURE_LOADER_CIPHER_AES_128_CTR=$(_WRS_CONFIG_SECURE_LOADER_CIPHER_AES_128_CTR) \
+	  "$(CMAKE)" \
+	  -G "$(CMAKE_GENERATOR)" \
+	  -DCMAKE_VERBOSE_MAKEFILE=ON \
+	  $(CMAKE_TOOLCHAIN_FILE_ARG) \
+	  $(CMAKE_OPTIONS) \
+	  $(CMAKE_DBGOPT) \
+	  $(SRCDIR)
+
+g% : generate
+	cd $(BUILDDIR) && "$(CMAKE)" --build . -- $(BUILD_ARGS) $@
+
+%/% : generate
+	cd $(BUILDDIR) && "$(CMAKE)" --build . -- $(BUILD_ARGS) $@
+
+%.i : generate
+	cd $(BUILDDIR) && "$(CMAKE)" --build . -- $(BUILD_ARGS) $@

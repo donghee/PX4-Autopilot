@@ -1,0 +1,1 @@
+docker exec vxbuild /opt/WindRiver/wrenv.linux -- ~/workspace/PX4-Autopilot_vxworks/Tools/vxworks/build_px4.sh

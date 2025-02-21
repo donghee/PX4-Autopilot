@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (C) 2019 PX4 Development Team. All rights reserved.
+ *   Copyright (c) 2022 ModalAI, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,62 +32,30 @@
  ****************************************************************************/
 
 /**
- * @file BlockingList.hpp
+ * @file board_config.h
  *
- * A blocking intrusive linked list.
+ * VOXL2 internal definitions
  */
 
 #pragma once
 
-#include "IntrusiveSortedList.hpp"
-#include "LockGuard.hpp"
+#define BOARD_HAS_NO_RESET
+#define BOARD_HAS_NO_BOOTLOADER
 
-// DONGHEE
-#define CLOCK_REALTIME	0
-// DONGHEE
-#include <pthread.h>
-#include <stdlib.h>
+// Define this as empty since there are no I2C buses
+#define BOARD_I2C_BUS_CLOCK_INIT
 
-template<class T>
-class BlockingList : public IntrusiveSortedList<T>
-{
-public:
+#include <system_config.h>
+#include <px4_platform_common/board_common.h>
 
-	~BlockingList()
-	{
-		pthread_mutex_destroy(&_mutex);
-		pthread_cond_destroy(&_cv);
-	}
+#define BOARD_OVERRIDE_UUID "YP_FC_V1" // must be of length 16
+#define PX4_SOC_ARCH_ID_YP_FC_V1 0x100B
+#define PX4_SOC_ARCH_ID PX4_SOC_ARCH_ID_YP_FC_V1
 
-	void add(T newNode)
-	{
-		LockGuard lg{_mutex};
-		IntrusiveSortedList<T>::add(newNode);
-	}
+//#define VOXL_ESC_DEFAULT_PORT 	"2"
+//#define VOXL2_IO_DEFAULT_PORT 	"2"
 
-	bool remove(T removeNode)
-	{
-		LockGuard lg{_mutex};
-		return IntrusiveSortedList<T>::remove(removeNode);
-	}
-
-	size_t size()
-	{
-		LockGuard lg{_mutex};
-		return IntrusiveSortedList<T>::size();
-	}
-
-	void clear()
-	{
-		LockGuard lg{_mutex};
-		IntrusiveSortedList<T>::clear();
-	}
-
-	pthread_mutex_t &mutex() { return _mutex; }
-
-private:
-
-	pthread_mutex_t	_mutex = PTHREAD_MUTEX_INITIALIZER;
-	pthread_cond_t	_cv = PTHREAD_COND_INITIALIZER;
-
-};
+// TODO: DONGHEE This is a hack to get the build to work
+#define system_usleep usleep
+#define sysconf(_SC_PAGESIZE) 1
+//#define CLOCK_REALTIME     0

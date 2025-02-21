@@ -592,3 +592,18 @@ failsafe_web:
 run_failsafe_web_server: failsafe_web
 	@cd build/px4_sitl_default_failsafe_web && \
 		python3 -m http.server
+
+vxworks:
+	@if ! command -v wr-c++; then echo -e "Install vxworks sdk And source the env: source <path>/emsdk_env.sh"; exit 1; fi
+	@echo 'export WIND_CC_SYSROOT=$(HOME)/workspace/vsb_zynq7k_vxprj'
+	@export WIND_CC_SYSROOT="$(HOME)/workspace/vsb_zynq7k_vxprj" && \
+		$(MAKE) --no-print-directory yp_fc-v1_default \
+		PX4_CMAKE_BUILD_TYPE=Release \
+		CMAKE_ARGS="-DWIND_CC_SYSROOT=$(HOME)workspace/vsb_zynq7k_vxprj \
+		-DCMAKE_TOOLCHAIN_FILE=$(HOME)/workspace/vsb_zynq7k_vxprj/mk/toolchain.cmake \
+		-DVX_TARGET_TYPE=DKM \
+		-DCMAKE_VERBOSE_MAKEFILE=ON \
+		-DCMAKE_WARN_DEPRECATED=OFF \
+		-DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+		-DCMAKE_CXX_FLAGS='-U_POSIX_C_SOURCE' \
+		-DCMAKE_C_FLAGS='-U_POSIX_C_SOURCE'"

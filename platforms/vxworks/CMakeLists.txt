@@ -1,3 +1,60 @@
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+
+get_property(module_libraries GLOBAL PROPERTY PX4_MODULE_LIBRARIES)
+
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/bin)
+
+set(PX4_SHELL_COMMAND_PREFIX "px4-")
+
+add_definitions("-DPX4_SHELL_COMMAND_PREFIX=\"${PX4_SHELL_COMMAND_PREFIX}\"")
+
+#px4_posix_generate_builtin_commands(
+#	OUT apps
+#	MODULE_LIST ${module_libraries})
+#
+#px4_posix_generate_alias(
+#	OUT ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/px4-alias.sh
+#	MODULE_LIST ${module_libraries}
+#	PREFIX ${PX4_SHELL_COMMAND_PREFIX}
+#)
+
+add_definitions(-DPX4_SOURCE_DIR="${PX4_SOURCE_DIR}" -DPX4_BINARY_DIR="${PX4_BINARY_DIR}")
+
+
+add_executable(px4
+	src/px4/main.cpp
+#	apps.cpp
+)
+
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
+set(BUILD_SHARED_LIBS OFF)
+
+target_link_libraries(px4
+	PRIVATE
+		${module_libraries}
+		m
+		parameters
+		px4_layer
+)
+
+# set_target_properties(px4
+#         PROPERTIES
+#         LINK_SEARCH_START_STATIC ON
+#         LINK_SEARCH_END ON
+# )
+
+#if((NOT APPLE) AND (NOT ANDROID))
+#	target_link_libraries(px4 PRIVATE rt)
+#endif()
+
+#target_link_libraries(px4 PRIVATE uORB)
+
+#if("${PX4_BOARD}" MATCHES "fc-v1")
+#target_link_libraries(px4 PRIVATE robotics_cape)
+
+
 # CMakeLists.txt - px4_main build configuration
 # Copyright (c) 2016, 2020 Wind River Systems, Inc. All Rights Reserved.
 #
@@ -15,9 +72,9 @@
 # - cmake-2.8.9 or later is required for VxWorks Sharedlibs with Diab
 # - cmake-3.3.0 or later is required for CROSSCOMPILING_EMULATOR to work
 # - cmake-3.6.2 is recommended and has received most testing.
-cmake_minimum_required(VERSION 2.8.7)
+#cmake_minimum_required(VERSION 2.8.7)
 
-project(px4_main CXX C ASM)
+#project(px4_main CXX C ASM)
 
 # set(CMAKE_CXX_STANDARD 14)
 # set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -29,46 +86,46 @@ project(px4_main CXX C ASM)
 #set(CMAKE_CXX_COMPILER_ID, "Clang")
 
 # PX4-Autopilot
-set(PX4_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}" CACHE FILEPATH "PX4 source directory" FORCE)
-set(PX4_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}" CACHE FILEPATH "PX4 binary directory" FORCE)
-message(STATUS "PX4_SOURCE_DIR: ${PX4_SOURCE_DIR}")
-message(STATUS "PX4_BINARY_DIR: ${PX4_BINARY_DIR}")
-list(APPEND CMAKE_MODULE_PATH ${PX4_SOURCE_DIR}/../../cmake/gtest/)
-list(APPEND CMAKE_MODULE_PATH ${PX4_SOURCE_DIR}/../../cmake)
+#set(PX4_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}" CACHE FILEPATH "PX4 source directory" FORCE)
+#set(PX4_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}" CACHE FILEPATH "PX4 binary directory" FORCE)
+#message(STATUS "PX4_SOURCE_DIR: ${PX4_SOURCE_DIR}")
+#message(STATUS "PX4_BINARY_DIR: ${PX4_BINARY_DIR}")
+#list(APPEND CMAKE_MODULE_PATH ${PX4_SOURCE_DIR}/../../cmake/gtest/)
+#list(APPEND CMAKE_MODULE_PATH ${PX4_SOURCE_DIR}/../../cmake)
 
-include(px4_parse_function_args)
-include(px4_git)
-include(px4_add_module)
-include(px4_add_library)
-include(px4_add_gtest)
-include(gtest)
+#include(px4_parse_function_args)
+#include(px4_git)
+#include(px4_add_module)
+#include(px4_add_library)
+#include(px4_add_gtest)
+#include(gtest)
 
 #get_cmake_property(_variableNames VARIABLES)
 #foreach(_variableName ${_variableNames})
 #    message(STATUS "${_variableName}=${${_variableName}}")
 #endforeach()
 
-include_directories(src/px4/lib)
-include_directories(src/px4/lib/matrix)
-include_directories(src/px4/platforms/common)
-include_directories(src/px4/platforms/common/include)
-include_directories(src/px4/platforms/common/include/px4_platform_common)
-include_directories(src/px4/platforms/posix/include)
-include_directories(src/px4/platforms/posix/src/px4/common)
-include_directories(src/px4/px4_vxworks_default)
-include_directories(src/px4)
-include_directories(src/px4/include)
-include_directories(src/px4/px4_vxworks_default)
-include_directories(src/build/px4_vxworks_default)
-include_directories(include)
+#include_directories(src/px4/lib)
+#include_directories(src/px4/lib/matrix)
+#include_directories(src/px4/platforms/common)
+#include_directories(src/px4/platforms/common/include)
+#include_directories(src/px4/platforms/common/include/px4_platform_common)
+#include_directories(src/px4/platforms/posix/include)
+#include_directories(src/px4/platforms/posix/src/px4/common)
+#include_directories(src/px4/px4_vxworks_default)
+#include_directories(src/px4)
+#include_directories(src/px4/include)
+#include_directories(src/px4/px4_vxworks_default)
+#include_directories(src/build/px4_vxworks_default)
+#include_directories(include)
 
-add_compile_definitions(__PX4_POSIX)
+# add_compile_definitions(__PX4_POSIX)
 add_compile_definitions(__PX4_VXWORKS)
 
-add_subdirectory(src/px4/platforms/common)
+#add_subdirectory(src/px4/platforms/common)
 
-message(STATUS "CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
-include(px4_add_gtest)
+#message(STATUS "CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
+#include(px4_add_gtest)
 
 
 set(PX4_SHELL_COMMAND_PREFIX "px4-")
@@ -80,31 +137,31 @@ add_definitions("-DPX4_SHELL_COMMAND_PREFIX=\"${PX4_SHELL_COMMAND_PREFIX}\"")
 ## Defining a Version for the sharedlib is optional.
 #set_target_properties(helloshared PROPERTIES SOVERSION 1)
 
-add_executable(px4_main
-	#src/helloworld.c
-	src/px4/main.cpp
-	#src/px4/platforms/common/px4_getopt.c 
-	#src/cpp/list.cpp
-	#src/asm/addone.S
-)
-set_target_properties(px4_main PROPERTIES HAS_CXX TRUE)
+#add_executable(px4_main
+#	#src/helloworld.c
+#	src/px4/main.cpp
+#	#src/px4/platforms/common/px4_getopt.c 
+#	#src/cpp/list.cpp
+#	#src/asm/addone.S
+#)
+#set_target_properties(px4_main PROPERTIES HAS_CXX TRUE)
 
-add_dependencies(px4_main px4_platform px4_work_queue work_queue prebuild_targets)
+#add_dependencies(px4_main px4_platform px4_work_queue work_queue prebuild_targets)
 
-target_link_libraries(px4_main 
-    PRIVATE
-	    px4_platform
-	    px4_work_queue
-	    work_queue
-)
+#target_link_libraries(px4_main 
+#    PRIVATE
+#	    px4_platform
+#	    px4_work_queue
+#	    work_queue
+#)
 
-target_link_directories(px4_main 
-    PRIVATE
-	${PX4_BINARY_DIR}/src/px4/platforms/common
-	${PX4_BINARY_DIR}/src/px4/platforms/common/px4_work_queue
-	${PX4_BINARY_DIR}/src/px4/platforms/common/work_queue
-)
-
+#target_link_directories(px4_main 
+#    PRIVATE
+#	${PX4_BINARY_DIR}/src/px4/platforms/common
+#	${PX4_BINARY_DIR}/src/px4/platforms/common/px4_work_queue
+#	${PX4_BINARY_DIR}/src/px4/platforms/common/work_queue
+#)
+#
 
 #./Release/src/px4/platforms/common/libpx4_platform.a
 #./Release/src/px4/platforms/common/px4_work_queue/libpx4_work_queue.a

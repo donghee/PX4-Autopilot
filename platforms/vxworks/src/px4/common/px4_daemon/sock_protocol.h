@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (C) 2019 PX4 Development Team. All rights reserved.
+ *   Copyright (C) 2018 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,64 +30,19 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
-
 /**
- * @file BlockingList.hpp
+ * @file sock_protocol.h
  *
- * A blocking intrusive linked list.
+ * @author Mara Bos <m-ou.se@m-ou.se>
  */
-
 #pragma once
 
-#include "IntrusiveSortedList.hpp"
-#include "LockGuard.hpp"
+#include <string>
 
-// DONGHEE
-#define CLOCK_REALTIME	0
-// DONGHEE
-#include <pthread.h>
-#include <stdlib.h>
-
-template<class T>
-class BlockingList : public IntrusiveSortedList<T>
+namespace px4_daemon
 {
-public:
 
-	~BlockingList()
-	{
-		pthread_mutex_destroy(&_mutex);
-		pthread_cond_destroy(&_cv);
-	}
+std::string get_socket_path(int instance_id);
 
-	void add(T newNode)
-	{
-		LockGuard lg{_mutex};
-		IntrusiveSortedList<T>::add(newNode);
-	}
+} // namespace px4_daemon
 
-	bool remove(T removeNode)
-	{
-		LockGuard lg{_mutex};
-		return IntrusiveSortedList<T>::remove(removeNode);
-	}
-
-	size_t size()
-	{
-		LockGuard lg{_mutex};
-		return IntrusiveSortedList<T>::size();
-	}
-
-	void clear()
-	{
-		LockGuard lg{_mutex};
-		IntrusiveSortedList<T>::clear();
-	}
-
-	pthread_mutex_t &mutex() { return _mutex; }
-
-private:
-
-	pthread_mutex_t	_mutex = PTHREAD_MUTEX_INITIALIZER;
-	pthread_cond_t	_cv = PTHREAD_COND_INITIALIZER;
-
-};

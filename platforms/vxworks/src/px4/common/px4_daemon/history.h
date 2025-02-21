@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (C) 2019 PX4 Development Team. All rights reserved.
+ *   Copyright (C) 2016 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,64 +30,75 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
-
 /**
- * @file BlockingList.hpp
+ * @file history.h
  *
- * A blocking intrusive linked list.
+ * Simple command history for the PX4 shell (pxh).
+ *
+ * This allows to go back in the history of entered commands.
+ * Additionally, before going back in the history, the current prompt can get saved.
+ *
+ * @author Julian Oes <julian@oes.ch>
  */
-
 #pragma once
 
-#include "IntrusiveSortedList.hpp"
-#include "LockGuard.hpp"
+#include <vector>
+#include <string>
 
-// DONGHEE
-#define CLOCK_REALTIME	0
-// DONGHEE
-#include <pthread.h>
-#include <stdlib.h>
+namespace px4_daemon
+{
 
-template<class T>
-class BlockingList : public IntrusiveSortedList<T>
+class History
 {
 public:
+	/**
+	 * Try to append the current line to the history.
+	 * Ignore the line if it is empty or duplicate of the
+	 * last added one.
+	 *
+	 * Drop the first entry of the history if we reach the
+	 * MAX_HISTORY_SIZE.
+	 *
+	 * @param line: command line to be added.
+	 */
+	void try_to_add(const std::string &line);
 
-	~BlockingList()
-	{
-		pthread_mutex_destroy(&_mutex);
-		pthread_cond_destroy(&_cv);
-	}
+	/**
+	 * After executing a command in the shell, we want to be at
+	 * the end of the history again.
+	 */
+	void reset_to_end();
 
-	void add(T newNode)
-	{
-		LockGuard lg{_mutex};
-		IntrusiveSortedList<T>::add(newNode);
-	}
+	/**
+	 * If we start scrolling up in the history, we can try to save
+	 * the current command line. When we scroll back down, we can
+	 * get it out again.
+	 *
+	 * @param line: line to be saved
+	 */
+	void try_to_save_current_line(const std::string &line);
 
-	bool remove(T removeNode)
-	{
-		LockGuard lg{_mutex};
-		return IntrusiveSortedList<T>::remove(removeNode);
-	}
 
-	size_t size()
-	{
-		LockGuard lg{_mutex};
-		return IntrusiveSortedList<T>::size();
-	}
+	/**
+	 * Set the previous (earlier) command from the history.
+	 *
+	 * @param line: swap to previous line if available.
+	 */
+	void get_previous(std::string &line);
 
-	void clear()
-	{
-		LockGuard lg{_mutex};
-		IntrusiveSortedList<T>::clear();
-	}
+	/**
+	 * Set the next (more recent) command from the history.
+	 *
+	 * @param line: swap to next line if available, otherwise saved current.
+	 */
+	void get_next(std::string &line);
 
-	pthread_mutex_t &mutex() { return _mutex; }
-
+	static const unsigned MAX_HISTORY_SIZE = 100;
 private:
-
-	pthread_mutex_t	_mutex = PTHREAD_MUTEX_INITIALIZER;
-	pthread_cond_t	_cv = PTHREAD_COND_INITIALIZER;
-
+	std::vector<std::string> _history;
+	std::vector<std::string>::iterator _current_history_entry;
+	std::string _current_line;
 };
+
+} // namespace px4_daemon
+

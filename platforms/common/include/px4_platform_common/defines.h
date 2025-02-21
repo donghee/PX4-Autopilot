@@ -108,6 +108,13 @@ __END_DECLS
  * Defines for POSIX and ROS
  ****************************************************************************/
 
+#ifdef __PX4_VXWORKS
+#define PX4_O_MODE_666 0666
+#define PX4_O_MODE_600 0600
+#define PX4_ROOTFSDIR ""
+#define PX4_STORAGEDIR PX4_ROOTFSDIR "/data/px4"
+#endif
+
 #define OK 0
 #define ERROR -1
 #define MAX_RAND 32767

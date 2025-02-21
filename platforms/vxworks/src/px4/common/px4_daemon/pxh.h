@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (C) 2019 PX4 Development Team. All rights reserved.
+ *   Copyright (C) 2016-2022 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,64 +30,77 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
-
 /**
- * @file BlockingList.hpp
+ * @file pxh.h
  *
- * A blocking intrusive linked list.
+ * The POSIX PX4 implementation features a simple shell to start modules
+ * or use system commands.
+ *
+ * @author Mark Charlebois <charlebm@gmail.com>
+ * @author Roman Bapst <bapstroman@gmail.com>
+ * @author Julian Oes <julian@oes.ch>
  */
-
 #pragma once
 
-#include "IntrusiveSortedList.hpp"
-#include "LockGuard.hpp"
+#include <vector>
+#include <string>
+#include <termios.h>
 
-// DONGHEE
-#define CLOCK_REALTIME	0
-// DONGHEE
-#include <pthread.h>
-#include <stdlib.h>
+#include <platforms/posix/apps.h>
+#include "history.h"
 
-template<class T>
-class BlockingList : public IntrusiveSortedList<T>
+namespace px4_daemon
+{
+
+
+class Pxh
 {
 public:
+	Pxh();
+	~Pxh();
 
-	~BlockingList()
-	{
-		pthread_mutex_destroy(&_mutex);
-		pthread_cond_destroy(&_cv);
-	}
+	/**
+	 * Process and run one command line.
+	 *
+	 * @param silently_fail: don't make a fuss on failure
+	 * @return 0 if successful. */
+	static int process_line(const std::string &line, bool silently_fail);
 
-	void add(T newNode)
-	{
-		LockGuard lg{_mutex};
-		IntrusiveSortedList<T>::add(newNode);
-	}
+	/**
+	 * Run the pxh shell. This will only return if stop() is called.
+	 */
+	void run_pxh();
 
-	bool remove(T removeNode)
-	{
-		LockGuard lg{_mutex};
-		return IntrusiveSortedList<T>::remove(removeNode);
-	}
+	/**
+	 * Run the remote mavlink pxh shell.
+	 */
+	void run_remote_pxh(int remote_in_fd, int remote_out_fd);
 
-	size_t size()
-	{
-		LockGuard lg{_mutex};
-		return IntrusiveSortedList<T>::size();
-	}
-
-	void clear()
-	{
-		LockGuard lg{_mutex};
-		IntrusiveSortedList<T>::clear();
-	}
-
-	pthread_mutex_t &mutex() { return _mutex; }
+	/**
+	 * Can be called to stop all pxh shells.
+	 */
+	static void stop();
 
 private:
+	void _print_prompt();
+	void _move_cursor(int position);
+	void _clear_line();
+	void _tab_completion(std::string &prefix);
+	void _check_remote_uorb_command(std::string &line);
 
-	pthread_mutex_t	_mutex = PTHREAD_MUTEX_INITIALIZER;
-	pthread_cond_t	_cv = PTHREAD_COND_INITIALIZER;
+	void _setup_term();
+	static void _restore_term();
 
+	bool _should_exit{false};
+	bool _local_terminal{false};
+	History _history;
+	struct termios _orig_term {};
+
+	static apps_map_type _apps;
+	static Pxh *_instance;
 };
+
+
+
+} // namespace px4_daemon
+

@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (C) 2019 PX4 Development Team. All rights reserved.
+ * Copyright (C) 2015 Mark Charlebois. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,63 +31,32 @@
  *
  ****************************************************************************/
 
-/**
- * @file BlockingList.hpp
- *
- * A blocking intrusive linked list.
- */
+#include <px4_platform_common/log.h>
+#include <px4_platform_common/posix.h>
+#include <semaphore.h>
+#include <px4_platform_common/workqueue.h>
 
 #pragma once
 
-#include "IntrusiveSortedList.hpp"
-#include "LockGuard.hpp"
+__BEGIN_DECLS
 
-// DONGHEE
-#define CLOCK_REALTIME	0
-// DONGHEE
-#include <pthread.h>
-#include <stdlib.h>
+extern px4_sem_t _hrt_work_lock;
+extern struct wqueue_s g_hrt_work;
 
-template<class T>
-class BlockingList : public IntrusiveSortedList<T>
+void hrt_work_queue_init(void);
+int hrt_work_queue(struct work_s *work, worker_t worker, void *arg, uint32_t usdelay);
+void hrt_work_cancel(struct work_s *work);
+
+static inline void hrt_work_lock(void);
+static inline void hrt_work_lock()
 {
-public:
+	px4_sem_wait(&_hrt_work_lock);
+}
 
-	~BlockingList()
-	{
-		pthread_mutex_destroy(&_mutex);
-		pthread_cond_destroy(&_cv);
-	}
+static inline void hrt_work_unlock(void);
+static inline void hrt_work_unlock()
+{
+	px4_sem_post(&_hrt_work_lock);
+}
 
-	void add(T newNode)
-	{
-		LockGuard lg{_mutex};
-		IntrusiveSortedList<T>::add(newNode);
-	}
-
-	bool remove(T removeNode)
-	{
-		LockGuard lg{_mutex};
-		return IntrusiveSortedList<T>::remove(removeNode);
-	}
-
-	size_t size()
-	{
-		LockGuard lg{_mutex};
-		return IntrusiveSortedList<T>::size();
-	}
-
-	void clear()
-	{
-		LockGuard lg{_mutex};
-		IntrusiveSortedList<T>::clear();
-	}
-
-	pthread_mutex_t &mutex() { return _mutex; }
-
-private:
-
-	pthread_mutex_t	_mutex = PTHREAD_MUTEX_INITIALIZER;
-	pthread_cond_t	_cv = PTHREAD_COND_INITIALIZER;
-
-};
+__END_DECLS

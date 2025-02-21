@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (C) 2019 PX4 Development Team. All rights reserved.
+ *   Copyright (c) 2015 Mark Charlebois. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,62 +32,69 @@
  ****************************************************************************/
 
 /**
- * @file BlockingList.hpp
+ * @file px4_posix_impl.cpp
  *
- * A blocking intrusive linked list.
+ * PX4 Middleware Wrapper Linux Implementation
  */
 
-#pragma once
-
-#include "IntrusiveSortedList.hpp"
-#include "LockGuard.hpp"
-
-// DONGHEE
-#define CLOCK_REALTIME	0
-// DONGHEE
+#include <px4_platform_common/defines.h>
+#include <px4_platform_common/workqueue.h>
+#include <px4_platform_common/defines.h>
+#include <px4_platform_common/time.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <signal.h>
+#include <errno.h>
+#include <unistd.h>
+#include <parameters/param.h>
+#include "hrt_work.h"
+#include <drivers/drv_hrt.h>
 #include <pthread.h>
-#include <stdlib.h>
+#include <px4_platform_common/init.h>
 
-template<class T>
-class BlockingList : public IntrusiveSortedList<T>
+extern pthread_t _shell_task_id;
+
+__BEGIN_DECLS
+
+long PX4_TICKS_PER_SEC = sysconf(_SC_CLK_TCK);
+
+__END_DECLS
+
+namespace px4
 {
-public:
 
-	~BlockingList()
-	{
-		pthread_mutex_destroy(&_mutex);
-		pthread_cond_destroy(&_cv);
-	}
+void init_once();
 
-	void add(T newNode)
-	{
-		LockGuard lg{_mutex};
-		IntrusiveSortedList<T>::add(newNode);
-	}
+void init_once()
+{
+	_shell_task_id = pthread_self();
 
-	bool remove(T removeNode)
-	{
-		LockGuard lg{_mutex};
-		return IntrusiveSortedList<T>::remove(removeNode);
-	}
+	work_queues_init();
+	hrt_work_queue_init();
 
-	size_t size()
-	{
-		LockGuard lg{_mutex};
-		return IntrusiveSortedList<T>::size();
-	}
+	px4_platform_init();
+}
 
-	void clear()
-	{
-		LockGuard lg{_mutex};
-		IntrusiveSortedList<T>::clear();
-	}
+void init(int argc, char *argv[], const char *app_name)
+{
+	printf("\n");
+	printf("______  __   __    ___ \n");
+	printf("| ___ \\ \\ \\ / /   /   |\n");
+	printf("| |_/ /  \\ V /   / /| |\n");
+	printf("|  __/   /   \\  / /_| |\n");
+	printf("| |     / /^\\ \\ \\___  |\n");
+	printf("\\_|     \\/   \\/     |_/\n");
+	printf("\n");
+	printf("%s starting.\n", app_name);
+	printf("\n");
 
-	pthread_mutex_t &mutex() { return _mutex; }
+	// set the threads name
+#ifdef __PX4_DARWIN
+	(void)pthread_setname_np(app_name);
+#else
+	(void)pthread_setname_np(pthread_self(), app_name);
+#endif
+}
 
-private:
+}
 
-	pthread_mutex_t	_mutex = PTHREAD_MUTEX_INITIALIZER;
-	pthread_cond_t	_cv = PTHREAD_COND_INITIALIZER;
-
-};

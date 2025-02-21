@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (C) 2019 PX4 Development Team. All rights reserved.
+ *   Copyright (c) 2019 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,63 +31,45 @@
  *
  ****************************************************************************/
 
-/**
- * @file BlockingList.hpp
- *
- * A blocking intrusive linked list.
- */
+#include <px4_platform_common/init.h>
+#include <px4_platform_common/px4_config.h>
+#include <px4_platform_common/defines.h>
+#include <px4_platform_common/log.h>
+#include <drivers/drv_hrt.h>
+#include <lib/parameters/param.h>
+#include <px4_platform_common/px4_work_queue/WorkQueueManager.hpp>
+#include <uORB/uORB.h>
 
-#pragma once
+#if defined(CONFIG_MODULES_MUORB_APPS)
+extern "C" { int muorb_init(); }
+#endif
 
-#include "IntrusiveSortedList.hpp"
-#include "LockGuard.hpp"
-
-// DONGHEE
-#define CLOCK_REALTIME	0
-// DONGHEE
-#include <pthread.h>
-#include <stdlib.h>
-
-template<class T>
-class BlockingList : public IntrusiveSortedList<T>
+int px4_platform_init(void)
 {
-public:
+	hrt_init();
 
-	~BlockingList()
-	{
-		pthread_mutex_destroy(&_mutex);
-		pthread_cond_destroy(&_cv);
-	}
+	px4::WorkQueueManagerStart();
 
-	void add(T newNode)
-	{
-		LockGuard lg{_mutex};
-		IntrusiveSortedList<T>::add(newNode);
-	}
+// MUORB has slightly different startup requirements
+#if defined(CONFIG_MODULES_MUORB_APPS)
+	//Put sleeper in here to allow wq to finish initializing before param_init is called
+	usleep(10000);
 
-	bool remove(T removeNode)
-	{
-		LockGuard lg{_mutex};
-		return IntrusiveSortedList<T>::remove(removeNode);
-	}
+	uorb_start();
 
-	size_t size()
-	{
-		LockGuard lg{_mutex};
-		return IntrusiveSortedList<T>::size();
-	}
+	muorb_init();
 
-	void clear()
-	{
-		LockGuard lg{_mutex};
-		IntrusiveSortedList<T>::clear();
-	}
+	// Give muorb some time to setup the DSP
+	usleep(100000);
 
-	pthread_mutex_t &mutex() { return _mutex; }
+	param_init();
+#else
+	param_init();
 
-private:
+	uorb_start();
+#endif
 
-	pthread_mutex_t	_mutex = PTHREAD_MUTEX_INITIALIZER;
-	pthread_cond_t	_cv = PTHREAD_COND_INITIALIZER;
+	px4_log_initialize();
 
-};
+	return PX4_OK;
+}

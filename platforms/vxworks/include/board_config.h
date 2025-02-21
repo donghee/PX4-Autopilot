@@ -55,7 +55,7 @@
 //#define VOXL_ESC_DEFAULT_PORT 	"2"
 //#define VOXL2_IO_DEFAULT_PORT 	"2"
 
-// FIXME: DONGHEE This is a hack to get the build to work
+// TODO: DONGHEE This is a hack to get the build to work
 #define system_usleep usleep
 #define sysconf(_SC_PAGESIZE) 1
 #define CLOCK_REALTIME     0

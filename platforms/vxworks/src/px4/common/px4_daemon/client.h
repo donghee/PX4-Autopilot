@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (C) 2019 PX4 Development Team. All rights reserved.
+ *   Copyright (C) 2016, 2018 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,64 +30,59 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
-
 /**
- * @file BlockingList.hpp
+ * @file client.h
  *
- * A blocking intrusive linked list.
+ * The client can connect and write a command to the socket that is supplied by
+ * the server. It will then close its half of the connection, and read back the
+ * stdout stream of the process that it started, followed by its return value.
+ *
+ * It the client dies, the connection gets closed automatically and the corresponding
+ * thread in the server gets cancelled.
+ *
+ * @author Julian Oes <julian@oes.ch>
+ * @author Beat Küng <beat-kueng@gmx.net>
+ * @author Mara Bos <m-ou.se@m-ou.se>
  */
-
 #pragma once
 
-#include "IntrusiveSortedList.hpp"
-#include "LockGuard.hpp"
+#include <stdint.h>
 
-// DONGHEE
-#define CLOCK_REALTIME	0
-// DONGHEE
-#include <pthread.h>
-#include <stdlib.h>
+#include "sock_protocol.h"
 
-template<class T>
-class BlockingList : public IntrusiveSortedList<T>
+namespace px4_daemon
+{
+
+
+class Client
 {
 public:
+	Client(int instance_id = 0);
 
-	~BlockingList()
+	~Client();
+
+	Client(Client &&other) : _fd(other._fd), _instance_id(other._instance_id)
 	{
-		pthread_mutex_destroy(&_mutex);
-		pthread_cond_destroy(&_cv);
+		// Steal the fd from the moved-from client.
+		other._fd = -1;
 	}
 
-	void add(T newNode)
-	{
-		LockGuard lg{_mutex};
-		IntrusiveSortedList<T>::add(newNode);
-	}
-
-	bool remove(T removeNode)
-	{
-		LockGuard lg{_mutex};
-		return IntrusiveSortedList<T>::remove(removeNode);
-	}
-
-	size_t size()
-	{
-		LockGuard lg{_mutex};
-		return IntrusiveSortedList<T>::size();
-	}
-
-	void clear()
-	{
-		LockGuard lg{_mutex};
-		IntrusiveSortedList<T>::clear();
-	}
-
-	pthread_mutex_t &mutex() { return _mutex; }
+	/**
+	 * Process the supplied command line arguments and send them to server.
+	 *
+	 * @param argc: number of arguments
+	 * @param argv: argument values
+	 * @return 0 on success
+	 */
+	int process_args(const int argc, const char **argv);
 
 private:
+	int _send_cmds(const int argc, const char **argv);
+	int _listen();
 
-	pthread_mutex_t	_mutex = PTHREAD_MUTEX_INITIALIZER;
-	pthread_cond_t	_cv = PTHREAD_COND_INITIALIZER;
-
+	int _fd;
+	int _instance_id; ///< instance ID for running multiple instances of the px4 server
 };
+
+} // namespace px4_daemon
+

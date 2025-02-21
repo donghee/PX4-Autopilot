@@ -79,6 +79,10 @@ typedef int px4_task_t;
 #define SCHED_PRIORITY_MIN 0
 #define SCHED_PRIORITY_DEFAULT 20
 
+#elif defined(__PX4_VXWORKS)
+#define SCHED_PRIORITY_MAX 255 // TODO: DONGHEE check this MAX value
+#define SCHED_PRIORITY_MIN 0
+#define SCHED_PRIORITY_DEFAULT 20
 #else
 #error "No target OS defined"
 #endif

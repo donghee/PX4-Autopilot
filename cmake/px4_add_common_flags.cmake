@@ -163,7 +163,7 @@ function(px4_add_common_flags)
 
 	if((NOT CMAKE_BUILD_TYPE STREQUAL FuzzTesting) AND (NOT PX4_CONFIG MATCHES "px4_sitl"))
 		list(APPEND cxx_flags
-			-fno-rtti
+      #-fno-rtti # TODO DONGHEE check this
 		)
 	endif()
 

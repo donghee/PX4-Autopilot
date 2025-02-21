@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (C) 2019 PX4 Development Team. All rights reserved.
+ *   Copyright (C) 2016-2018 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,64 +30,56 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
-
 /**
- * @file BlockingList.hpp
+ * @file server_io.cpp
  *
- * A blocking intrusive linked list.
+ * @author Julian Oes <julian@oes.ch>
+ * @author Beat Küng <beat-kueng@gmx.net>
+ * @author Mara Bos <m-ou.se@m-ou.se>
  */
 
-#pragma once
-
-#include "IntrusiveSortedList.hpp"
-#include "LockGuard.hpp"
-
-// DONGHEE
-#define CLOCK_REALTIME	0
-// DONGHEE
+#include <stdio.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <string>
 #include <pthread.h>
-#include <stdlib.h>
+#include <poll.h>
+#include <assert.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
-template<class T>
-class BlockingList : public IntrusiveSortedList<T>
+#include <px4_platform_common/log.h>
+
+#include "server.h"
+#include <px4_daemon/server_io.h>
+#include "sock_protocol.h"
+
+
+using namespace px4_daemon;
+
+
+FILE *get_stdout(bool *isatty_)
 {
-public:
+	Server::CmdThreadSpecificData *thread_data_ptr;
 
-	~BlockingList()
-	{
-		pthread_mutex_destroy(&_mutex);
-		pthread_cond_destroy(&_cv);
+	// If we are not in a thread that has been started by a client, we don't
+	// have any thread specific data set and we won't have a pipe to write
+	// stdout to.
+	if (!Server::is_running() ||
+	    (thread_data_ptr = (Server::CmdThreadSpecificData *)pthread_getspecific(
+				       Server::get_pthread_key())) == nullptr) {
+		if (isatty_) { *isatty_ = isatty(1); }
+
+		return stdout;
 	}
 
-	void add(T newNode)
-	{
-		LockGuard lg{_mutex};
-		IntrusiveSortedList<T>::add(newNode);
+	if (thread_data_ptr->thread_stdout == nullptr) {
+		if (isatty_) { *isatty_ = isatty(1); }
+
+		return stdout;
 	}
 
-	bool remove(T removeNode)
-	{
-		LockGuard lg{_mutex};
-		return IntrusiveSortedList<T>::remove(removeNode);
-	}
+	if (isatty_) { *isatty_ = thread_data_ptr->is_atty; }
 
-	size_t size()
-	{
-		LockGuard lg{_mutex};
-		return IntrusiveSortedList<T>::size();
-	}
-
-	void clear()
-	{
-		LockGuard lg{_mutex};
-		IntrusiveSortedList<T>::clear();
-	}
-
-	pthread_mutex_t &mutex() { return _mutex; }
-
-private:
-
-	pthread_mutex_t	_mutex = PTHREAD_MUTEX_INITIALIZER;
-	pthread_cond_t	_cv = PTHREAD_COND_INITIALIZER;
-
-};
+	return thread_data_ptr->thread_stdout;
+}

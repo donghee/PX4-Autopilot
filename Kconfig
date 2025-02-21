@@ -19,6 +19,8 @@ menu "Toolchain"
             bool "qurt"
         config PLATFORM_ROS2
             bool "ros2"
+        config PLATFORM_VXWORKS
+            bool "vxworks"
     endchoice
 
     config BOARD_PLATFORM
@@ -27,6 +29,7 @@ menu "Toolchain"
         default "posix" if PLATFORM_POSIX
         default "qurt" if PLATFORM_QURT
         default "ros2" if PLATFORM_ROS2
+        default "vxworks" if PLATFORM_VXWORKS
 
     config BOARD_LOCKSTEP
         bool "Force enable lockstep"

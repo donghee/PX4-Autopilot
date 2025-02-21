@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (C) 2019 PX4 Development Team. All rights reserved.
+ *   Copyright (c) 2017 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,62 +32,34 @@
  ****************************************************************************/
 
 /**
- * @file BlockingList.hpp
+ * @file system_config.h
  *
- * A blocking intrusive linked list.
+ * Definitions used by all SITL and Linux targets
  */
 
 #pragma once
 
-#include "IntrusiveSortedList.hpp"
-#include "LockGuard.hpp"
+#define PX4_CPU_UUID_BYTE_LENGTH 16
+#define PX4_CPU_UUID_WORD32_LENGTH 4
 
-// DONGHEE
-#define CLOCK_REALTIME	0
-// DONGHEE
-#include <pthread.h>
-#include <stdlib.h>
+#define PX4_CPU_MFGUID_BYTE_LENGTH              PX4_CPU_UUID_BYTE_LENGTH
+#define PX4_CPU_UUID_WORD32_UNIQUE_H            2 /* Most significant digits change the least */
+#define PX4_CPU_UUID_WORD32_UNIQUE_M            1 /* Middle significant digits */
+#define PX4_CPU_UUID_WORD32_UNIQUE_L            0 /* Least significant digits change the most */
+#define PX4_CPU_UUID_WORD32_FORMAT_SIZE         (PX4_CPU_UUID_WORD32_LENGTH-1+(2*PX4_CPU_UUID_BYTE_LENGTH)+1)
+#define PX4_CPU_MFGUID_FORMAT_SIZE              ((2*PX4_CPU_MFGUID_BYTE_LENGTH)+1)
 
-template<class T>
-class BlockingList : public IntrusiveSortedList<T>
-{
-public:
+#define BOARD_OVERRIDE_CPU_VERSION (-1)
+#define board_mcu_version(rev, revstr, errata) BOARD_OVERRIDE_CPU_VERSION
 
-	~BlockingList()
-	{
-		pthread_mutex_destroy(&_mutex);
-		pthread_cond_destroy(&_cv);
-	}
+#define BOARD_HAS_NO_UUID
 
-	void add(T newNode)
-	{
-		LockGuard lg{_mutex};
-		IntrusiveSortedList<T>::add(newNode);
-	}
+#define CONFIG_NFILE_STREAMS 1
+#define CONFIG_SCHED_WORKQUEUE 1
+#define CONFIG_SCHED_HPWORK 1
+#define CONFIG_SCHED_LPWORK 1
 
-	bool remove(T removeNode)
-	{
-		LockGuard lg{_mutex};
-		return IntrusiveSortedList<T>::remove(removeNode);
-	}
+/** time in ms between checks for work in work queues **/
+#define CONFIG_SCHED_WORKPERIOD 50000
 
-	size_t size()
-	{
-		LockGuard lg{_mutex};
-		return IntrusiveSortedList<T>::size();
-	}
-
-	void clear()
-	{
-		LockGuard lg{_mutex};
-		IntrusiveSortedList<T>::clear();
-	}
-
-	pthread_mutex_t &mutex() { return _mutex; }
-
-private:
-
-	pthread_mutex_t	_mutex = PTHREAD_MUTEX_INITIALIZER;
-	pthread_cond_t	_cv = PTHREAD_COND_INITIALIZER;
-
-};
+#define CONFIG_SCHED_INSTRUMENTATION 1

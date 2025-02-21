@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (C) 2019 PX4 Development Team. All rights reserved.
+ *   Copyright (c) 2023 ModalAI, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,64 +30,19 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
+#include <px4_platform_common/log.h>
+#include <uORB/uORBManager.hpp>
 
-/**
- * @file BlockingList.hpp
- *
- * A blocking intrusive linked list.
- */
-
-#pragma once
-
-#include "IntrusiveSortedList.hpp"
-#include "LockGuard.hpp"
-
-// DONGHEE
-#define CLOCK_REALTIME	0
-// DONGHEE
-#include <pthread.h>
-#include <stdlib.h>
-
-template<class T>
-class BlockingList : public IntrusiveSortedList<T>
+// This function will send a debug or error message up to the apps proc
+// so that it can be displayed and logged. Otherwise the messages are only
+// available with the mini-dm tool that requires adb (i.e. USB cable attached)
+extern "C" void qurt_log_to_apps(int level, const char *message)
 {
-public:
+	uORBCommunicator::IChannel *ch = uORB::Manager::get_instance()->get_uorb_communicator();
 
-	~BlockingList()
-	{
-		pthread_mutex_destroy(&_mutex);
-		pthread_cond_destroy(&_cv);
+	if (ch != nullptr) {
+		if (level >= _PX4_LOG_LEVEL_ERROR) { ch->send_message("slpi_error", strlen(message) + 1, (uint8_t *) message); }
+
+		else { ch->send_message("slpi_debug", strlen(message) + 1, (uint8_t *) message); }
 	}
-
-	void add(T newNode)
-	{
-		LockGuard lg{_mutex};
-		IntrusiveSortedList<T>::add(newNode);
-	}
-
-	bool remove(T removeNode)
-	{
-		LockGuard lg{_mutex};
-		return IntrusiveSortedList<T>::remove(removeNode);
-	}
-
-	size_t size()
-	{
-		LockGuard lg{_mutex};
-		return IntrusiveSortedList<T>::size();
-	}
-
-	void clear()
-	{
-		LockGuard lg{_mutex};
-		IntrusiveSortedList<T>::clear();
-	}
-
-	pthread_mutex_t &mutex() { return _mutex; }
-
-private:
-
-	pthread_mutex_t	_mutex = PTHREAD_MUTEX_INITIALIZER;
-	pthread_cond_t	_cv = PTHREAD_COND_INITIALIZER;
-
-};
+}
