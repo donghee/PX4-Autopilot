@@ -1,0 +1,22 @@
+name: px4_vxworks
+on_project_start: pwd
+windows:
+  - editor:
+      layout: main-vertical
+      panes:
+        - vim platforms/vxworks/src/px4/main.cpp
+        - Tools/vxworks/build_px4_using_docker.sh
+  - running:
+      layout: main-vertical
+      panes:
+        - Tools/vxworks/ftpd.sh
+        - Tools/vxworks/run_px4.sh
+  - docker:
+      layout: main-vertical
+      panes:
+        - lazydocker
+  - telnet:
+      layout: main-vertical
+      panes:
+        - telnet 192.168.5.61
+ 

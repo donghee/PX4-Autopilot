@@ -1,3 +1,7 @@
 #!/bin/sh
 
-cd $HOME/workspace/PX4-Autopilot_vxworks && make clean; make vxworks
+if [ "$1" = "clean" ]; then
+    cd $HOME/workspace/PX4-Autopilot_vxworks && make clean
+fi
+
+cd $HOME/workspace/PX4-Autopilot_vxworks && make vxworks
