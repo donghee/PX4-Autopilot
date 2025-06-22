@@ -100,7 +100,8 @@ int px4_shutdown_unlock()
 	return ret;
 }
 
-#if defined(CONFIG_SCHED_WORKQUEUE) || (!defined(CONFIG_BUILD_FLAT) && defined(CONFIG_LIBC_USRWORK))
+// TODO: DONGHEE This is a hack to get the build to work on VxWorks. Turn off the shutdown worker
+#if defined(CONFIG_SCHED_WORKQUEUE) && !defined(__PX4_VXWORKS) || (!defined(CONFIG_BUILD_FLAT) && defined(CONFIG_LIBC_USRWORK))
 
 static struct work_s shutdown_work = {};
 static uint16_t shutdown_counter = 0; ///< count how many times the shutdown worker was executed

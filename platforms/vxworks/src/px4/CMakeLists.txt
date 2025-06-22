@@ -45,10 +45,13 @@ set(VXWORKS_LAYER_SRCS
 	)
 
 add_library(px4_layer
+	${PX4_SOURCE_DIR}/platforms/vxworks/unresolved_symbols.c
 	${VXWORKS_LAYER_SRCS}
 )
 
 target_compile_definitions(px4_layer PRIVATE MODULE_NAME="px4")
 
 target_link_libraries(px4_layer PRIVATE work_queue)
-target_link_libraries(px4_layer PRIVATE drivers_board)
+# target_link_libraries(px4_layer PRIVATE drivers_board)
+target_link_libraries(px4_layer PRIVATE work_queue px4_work_queue)
+target_link_libraries(px4_layer PRIVATE px4_daemon drivers_board)

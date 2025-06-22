@@ -50,7 +50,7 @@
 #define sem_setprotocol(s,p)
 #endif
 
-#if (defined(__PX4_DARWIN) || defined(__PX4_CYGWIN) || defined(__PX4_POSIX)) && !defined(__PX4_QURT)
+#if (defined(__PX4_DARWIN) || defined(__PX4_CYGWIN) || defined(__PX4_POSIX)) && !defined(__PX4_QURT) && !defined(__PX4_VXWORKS)
 
 __BEGIN_DECLS
 
@@ -97,7 +97,7 @@ __BEGIN_DECLS
 #define px4_sem_getvalue	sem_getvalue
 #define px4_sem_destroy		sem_destroy
 
-#if defined(__PX4_QURT)
+#if defined(__PX4_QURT) || defined(__PX4_VXWORKS)
 __EXPORT int		px4_sem_timedwait(px4_sem_t *sem, const struct timespec *abstime);
 #else
 #define px4_sem_timedwait	sem_timedwait

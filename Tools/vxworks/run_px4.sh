@@ -16,7 +16,7 @@ expect -re $prompt
 send "cd \"host:\"\r"
 expect -re $prompt
 
-send "./px4\r"
+send "./px4 start\r"
 expect -re $prompt
 
 interact

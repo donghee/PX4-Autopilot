@@ -113,6 +113,16 @@ __EXPORT int pthread_attr_setschedpolicy(pthread_attr_t *attr, int policy);
 #define SIGCONT SIGALRM
 #endif
 
+#if defined(__PX4_VXWORKS)
+#ifdef NONE
+#undef NONE
+#endif
+#ifdef NAN
+#undef NAN
+#endif
+#define NAN           __builtin_nanf("")
+#endif
+
 __EXPORT int 		px4_open(const char *path, int flags, ...);
 __EXPORT int 		px4_close(int fd);
 __EXPORT ssize_t	px4_read(int fd, void *buffer, size_t buflen);

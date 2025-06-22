@@ -1,3 +1,4 @@
+
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 get_property(module_libraries GLOBAL PROPERTY PX4_MODULE_LIBRARIES)
@@ -10,10 +11,10 @@ set(PX4_SHELL_COMMAND_PREFIX "px4-")
 
 add_definitions("-DPX4_SHELL_COMMAND_PREFIX=\"${PX4_SHELL_COMMAND_PREFIX}\"")
 
-#px4_posix_generate_builtin_commands(
-#	OUT apps
-#	MODULE_LIST ${module_libraries})
-#
+px4_vxworks_generate_builtin_commands(
+	OUT apps
+	MODULE_LIST ${module_libraries})
+
 #px4_posix_generate_alias(
 #	OUT ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/px4-alias.sh
 #	MODULE_LIST ${module_libraries}
@@ -25,7 +26,7 @@ add_definitions(-DPX4_SOURCE_DIR="${PX4_SOURCE_DIR}" -DPX4_BINARY_DIR="${PX4_BIN
 
 add_executable(px4
 	src/px4/main.cpp
-#	apps.cpp
+	apps.cpp
 )
 
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")

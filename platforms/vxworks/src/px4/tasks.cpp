@@ -419,12 +419,13 @@ const char *px4_get_taskname()
 
 }
 
+// TODO delete sem_timedwait  already implemented in vxworks
 static void timer_cb(void *data)
 {
-	// px4_sem_t *sem = reinterpret_cast<px4_sem_t *>(data);
+	px4_sem_t *sem = reinterpret_cast<px4_sem_t *>(data);
 
 	// TODO: DONGHEE find sem_post equivalent in vxworks
-	// sem_post(sem);
+	sem_post(sem);
 }
 
 int px4_sem_timedwait(px4_sem_t *sem, const struct timespec *ts)
@@ -438,13 +439,12 @@ int px4_sem_timedwait(px4_sem_t *sem, const struct timespec *ts)
 
 	hrt_work_queue(&_hpwork, (worker_t)&timer_cb, (void *)sem, timeout_us);
 	// TODO: DONGHEE find sem_wait equivalent in vxworks
-	// sem_wait(sem);
+	sem_wait(sem);
 	hrt_work_cancel(&_hpwork);
 	return 0;
 }
 
 // TODO: DONGHEE px4_prctl is not implemented yet
-/*
 int px4_prctl(int option, const char *arg2, px4_task_t pid)
 {
 	int rv = -1;
@@ -455,7 +455,8 @@ int px4_prctl(int option, const char *arg2, px4_task_t pid)
 
 	for (int i = 0; i < PX4_MAX_TASKS; i++) {
 		if (taskmap[i].isused && taskmap[i].tid == (pthread_t) pid) {
-			rv = pthread_attr_setthreadname(&taskmap[i].attr, arg2);
+			// rv = pthread_attr_setthreadname(&taskmap[i].attr, arg2);
+			rv = pthread_attr_setname(&taskmap[i].attr, (char *)arg2);
 			pthread_mutex_unlock(&task_mutex);
 			return rv;
 		}
@@ -465,8 +466,8 @@ int px4_prctl(int option, const char *arg2, px4_task_t pid)
 
 	return rv;
 }
-*/
 
+/*
 int px4_prctl(int option, const char *arg2, px4_task_t pid)
 {
 	int rv = -1;
@@ -488,3 +489,4 @@ int px4_prctl(int option, const char *arg2, px4_task_t pid)
 
 	return rv;
 }
+*/

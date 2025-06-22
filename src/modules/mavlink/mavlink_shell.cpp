@@ -52,7 +52,11 @@
 #endif /* __PX4_NUTTX */
 
 #ifdef __PX4_POSIX
+#ifdef __PX4_VXWORKS
+#include "../../../platforms/vxworks/src/px4/common/px4_daemon/pxh.h"
+#else
 #include "../../../platforms/posix/src/px4/common/px4_daemon/pxh.h"
+#endif
 #endif /* __PX4_POSIX */
 
 #ifdef __PX4_CYGWIN

@@ -46,7 +46,7 @@
 include(px4_git)
 
 #include(Toolchain-qurt)
-#include(qurt_reqs)
+include(vxworks_reqs)
 
 #include_directories(${HEXAGON_SDK_INCLUDES})
 
@@ -126,6 +126,7 @@ function(px4_os_add_flags)
 
 	include_directories(
 		platforms/vxworks/include
+		platforms/vxworks
 	)
 
   # TODO: DONGHEE delete PX4_POSIX?

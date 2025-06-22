@@ -280,6 +280,8 @@ uint32_t px4_os_version(void)
 
 #elif defined(__PX4_NUTTX)
 	return version_tag_to_number(NUTTX_GIT_TAG_STR);
+#elif defined(__PX4_VXWORKS)
+	return 0; //TODO: implement version for VxWorks
 #else
 # error "px4_os_version not implemented for current OS"
 #endif
@@ -306,6 +308,8 @@ const char *px4_os_name(void)
 	return "NuttX";
 #elif defined(__PX4_CYGWIN)
 	return "Cygwin";
+#elif defined(__PX4_VXWORKS)
+	return "VxWorks";
 #else
 # error "px4_os_name not implemented for current OS"
 #endif

@@ -87,7 +87,7 @@ __EXPORT void px4_log_modulename(int level, const char *module_name, const char 
 	bool use_color = true;
 #endif // PX4_LOG_COLORIZED_OUTPUT
 
-#if defined(__PX4_POSIX)
+#if defined(__PX4_POSIX) && !defined(__PX4_VXWORKS)
 	bool isatty_ = false;
 	out = get_stdout(&isatty_);
 
@@ -95,6 +95,11 @@ __EXPORT void px4_log_modulename(int level, const char *module_name, const char 
 	use_color = isatty_;
 #endif // PX4_LOG_COLORIZED_OUTPUT
 #endif // PX4_POSIX
+
+#ifdef __PX4_VXWORKS
+	use_color = false;
+	out = stdout;
+#endif
 
 	if (level >= _PX4_LOG_LEVEL_INFO) {
 		char buf[max_length + 1]; // same length as log_message_s::text, but add newline
@@ -207,9 +212,14 @@ __EXPORT void px4_log_raw(int level, const char *fmt, ...)
 {
 	FILE *out = stdout;
 
-#ifdef __PX4_POSIX
+#if defined(__PX4_POSIX) && !defined(__PX4_VXWORKS)
 	bool use_color = true;
 	out = get_stdout(&use_color);
+#endif
+
+#ifdef __PX4_VXWORKS
+	bool use_color = false;
+	out = stdout;
 #endif
 
 	if (level >= _PX4_LOG_LEVEL_INFO) {
