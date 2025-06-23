@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (c) 2023 ModalAI, Inc. All rights reserved.
+ *   Copyright (c) 2020 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,5 +33,11 @@
 
 #pragma once
 
-extern "C" float px4muorb_get_cpu_load(void);
+#define CONFIG_FS_PROCFS_MAX_TASKS 64
 
+__BEGIN_DECLS
+
+__EXPORT void cpuload_monitor_start(void);
+__EXPORT void cpuload_monitor_stop(void);
+
+__END_DECLS

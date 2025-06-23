@@ -147,13 +147,17 @@ int zynq7k_main(int argc, char * argv[]) {
 	param_init();
 	process_commands(apps, "uorb start\n");
 	sleep(2);
-	process_commands(apps, "fake_imu start\n");
+	// process_commands(apps, "fake_imu start\n");
+	// process_commands(apps, "fake_gps start\n");
+	// process_commands(apps, "fake_magnetometer start\n");
+	process_commands(apps, "sensor_baro_sim start\n");
+	process_commands(apps, "sensor_gps_sim start\n");
+	process_commands(apps, "sensor_mag_sim start\n");
 	// process_commands(apps, "px4_simple_app start\n");
 	process_commands(apps, "uorb status\n");
-	process_commands(apps, "dataman start\n");
-	process_commands(apps, "dataman help\n");
-	process_commands(apps, "dataman start -r\n");
-	process_commands(apps, "mavlink help\n");
+	// process_commands(apps, "dataman start -f dataman\n");
+	process_commands(apps, "dataman start -r\n"); // RAM
+	process_commands(apps, "load_mon start\n");
 	process_commands(apps, "listen help\n");
 	process_commands(apps, "mavlink start -x -u 14556 -r 4000000 -f\n");
 	process_commands(apps, "mavlink stream -r 50 -s POSITION_TARGET_LOCAL_NED -u 14556\n");

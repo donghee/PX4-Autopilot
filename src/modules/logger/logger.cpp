@@ -647,7 +647,10 @@ void Logger::run()
 	hrt_abstime	timer_start = 0;
 	uint32_t	total_bytes = 0;
 
+	// TODO: DONGHEE This is a hack to get the build to work on VxWorks. Turn off the shutdown hook
+	#ifndef __PX4_VXWORKS
 	px4_register_shutdown_hook(&Logger::request_stop_static);
+	#endif
 
 	const bool disable_boot_logging = get_disable_boot_logging();
 
@@ -948,7 +951,10 @@ void Logger::run()
 		_mavlink_log_pub = nullptr;
 	}
 
+	// TODO: DONGHEE This is a hack to get the build to work on VxWorks. Turn off the shutdown hook
+	#ifndef __PX4_VXWORKS
 	px4_unregister_shutdown_hook(&Logger::request_stop_static);
+	#endif
 }
 
 void Logger::debug_print_buffer(uint32_t &total_bytes, hrt_abstime &timer_start)

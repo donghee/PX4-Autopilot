@@ -38,6 +38,8 @@ set(VXWORKS_LAYER_SRCS
 	drv_hrt.cpp
 	tasks.cpp
 	px4_vxworks_impl.cpp
+	cpuload.cpp
+	print_load.cpp
 	main.cpp
 	# vxworks_log.cpp
 	${PX4_SOURCE_DIR}/platforms/common/Serial.cpp

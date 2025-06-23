@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (c) 2022 ModalAI, Inc. All rights reserved.
+ *   Copyright (c) 2020 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,30 +32,34 @@
  ****************************************************************************/
 
 /**
- * @file board_config.h
+ * @file cpuload.cpp
  *
- * VOXL2 internal definitions
+ * Measurement of CPU load of each individual task.
+ *
+ * @author Lorenz Meier <lorenz@px4.io>
+ * @author Petri Tanskanen <petri.tanskanen@inf.ethz.ch>
  */
+#include <px4_platform_common/px4_config.h>
+#include <px4_platform_common/atomic.h>
+#include <px4_platform/cpuload.h>
 
-#pragma once
+#include <drivers/drv_hrt.h>
 
-#define BOARD_HAS_NO_RESET
-#define BOARD_HAS_NO_BOOTLOADER
+#include <sys/time.h>
 
-// Define this as empty since there are no I2C buses
-#define BOARD_I2C_BUS_CLOCK_INIT
+static px4::atomic_int cpuload_monitor_all_count{0};
 
-#include <system_config.h>
-#include <px4_platform_common/board_common.h>
+void cpuload_monitor_start()
+{
+	cpuload_monitor_all_count.fetch_add(1);
+}
 
-#define BOARD_OVERRIDE_UUID "YPFC2024" // must be of length 16
-#define PX4_SOC_ARCH_ID_YPFC2024 0x100B
-#define PX4_SOC_ARCH_ID PX4_SOC_ARCH_ID_YPFC2024
+void cpuload_monitor_stop()
+{
+	if (cpuload_monitor_all_count.fetch_sub(1) <= 1) {
+		// don't all the count to go negative
+		cpuload_monitor_all_count.store(0);
+	}
+}
 
-//#define VOXL_ESC_DEFAULT_PORT 	"2"
-//#define VOXL2_IO_DEFAULT_PORT 	"2"
-
-// TODO: DONGHEE This is a hack to get the build to work
-#define system_usleep usleep
-#define sysconf(_SC_PAGESIZE) 1
-#define CLOCK_REALTIME     0
+// TODO
