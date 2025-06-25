@@ -25,7 +25,7 @@ add_definitions(-DPX4_SOURCE_DIR="${PX4_SOURCE_DIR}" -DPX4_BINARY_DIR="${PX4_BIN
 
 
 add_executable(px4
-	src/px4/main.cpp
+	src/px4/common/main.cpp
 	apps.cpp
 )
 

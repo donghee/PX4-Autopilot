@@ -32,3 +32,31 @@
 ############################################################################
 
 add_subdirectory(px4_daemon)
+
+set(EXTRA_DEPENDS)
+
+# Placeholder
+set(VXWORKS_LAYER_SRCS
+	px4_vxworks_impl.cpp
+	tasks.cpp
+	px4_sem.cpp
+	px4_init.cpp
+	# lib_crc32.c
+	drv_hrt.cpp
+	cpuload.cpp
+	print_load.cpp
+	${PX4_SOURCE_DIR}/platforms/common/Serial.cpp
+	SerialImpl.cpp
+)
+
+add_library(px4_layer
+	${PX4_SOURCE_DIR}/platforms/vxworks/unresolved_symbols.c
+	${VXWORKS_LAYER_SRCS}
+)
+
+target_compile_definitions(px4_layer PRIVATE MODULE_NAME="px4")
+
+target_link_libraries(px4_layer PRIVATE work_queue)
+# target_link_libraries(px4_layer PRIVATE drivers_board)
+target_link_libraries(px4_layer PRIVATE work_queue px4_work_queue)
+target_link_libraries(px4_layer PRIVATE px4_daemon drivers_board)

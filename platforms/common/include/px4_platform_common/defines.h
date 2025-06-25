@@ -55,6 +55,7 @@
 static inline constexpr bool PX4_ISFINITE(float x) { return __builtin_isfinite(x); }
 static inline constexpr bool PX4_ISFINITE(double x) { return __builtin_isfinite(x); }
 #else
+#define PX4_ROOTFSDIR CONFIG_BOARD_ROOTFSDIR
 #define PX4_ISFINITE(x) __builtin_isfinite(x)
 #endif /* __cplusplus */
 
@@ -111,8 +112,9 @@ __END_DECLS
 #ifdef __PX4_VXWORKS
 #define PX4_O_MODE_666 0666
 #define PX4_O_MODE_600 0600
-#define PX4_ROOTFSDIR ""
-#define PX4_STORAGEDIR PX4_ROOTFSDIR "/data/px4"
+#define PX4_ROOTFSDIR "host:"
+// #define PX4_STORAGEDIR PX4_ROOTFSDIR "/data/px4"
+#define PX4_STORAGEDIR PX4_ROOTFSDIR ""
 #endif
 
 #define OK 0

@@ -40,7 +40,6 @@
 #include <time.h>
 #include <string.h>
 #include <errno.h>
-
 #include "hrt_work.h"
 
 static constexpr unsigned HRT_INTERVAL_MIN = 50;
@@ -59,7 +58,7 @@ __EXPORT uint32_t latency_counters[LATENCY_BUCKET_COUNT + 1];
 static px4_sem_t 	_hrt_lock;
 static struct work_s	_hrt_work;
 
-static int32_t dsp_offset = 0;
+static int32_t dsp_offset = 1;
 
 static void hrt_latency_update();
 
@@ -81,30 +80,16 @@ static void hrt_unlock()
 	px4_sem_post(&_hrt_lock);
 }
 
-// int px4_clock_settime(clockid_t clk_id, const struct timespec *tp)
-// {
-//         return 0;
-// }
+int px4_clock_settime(clockid_t clk_id, const struct timespec *tp)
+{
+	return 0;
+	// return system_clock_settime(clk_id, tp);
+}
 
 int px4_clock_gettime(clockid_t clk_id, struct timespec *tp)
 {
-	int rv = clock_gettime(clk_id, tp);
-	hrt_abstime temp_abstime = ts_to_abstime(tp);
-
-	if (dsp_offset < 0) {
-		hrt_abstime temp_offset = -dsp_offset;
-
-		if (temp_offset >= temp_abstime) { temp_abstime = 0; }
-
-		else { temp_abstime -= temp_offset; }
-
-	} else {
-		temp_abstime += (hrt_abstime) dsp_offset;
-	}
-
-	tp->tv_sec = temp_abstime / 1000000;
-	tp->tv_nsec = (temp_abstime % 1000000) * 1000;
-	return rv;
+	dsp_offset = 0; // Reset the offset to 0 for now
+	return system_clock_gettime(clk_id, tp);
 }
 
 hrt_abstime hrt_absolute_time()
@@ -114,11 +99,11 @@ hrt_abstime hrt_absolute_time()
 	return ts_to_abstime(&ts);
 }
 
-int hrt_set_absolute_time_offset(int32_t time_diff_us)
-{
+// int hrt_set_absolute_time_offset(int32_t time_diff_us)
+// {
 	// dsp_offset = time_diff_us;
-	return 0;
-}
+	// return 0;
+// }
 
 void hrt_store_absolute_time(volatile hrt_abstime *t)
 {

@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (C) 2019 PX4 Development Team. All rights reserved.
+ * Copyright (C) 2022 ModalAI, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,61 +31,71 @@
  *
  ****************************************************************************/
 
-#pragma once
+/**
+ * @file px4_vxworks_impl.cpp
+ *
+ * PX4 Middleware Wrapper VxWorks Implementation
+ */
 
-#include <px4_platform_common/sem.h>
+#include <px4_platform_common/defines.h>
+#include <px4_platform_common/workqueue.h>
+#include <px4_platform_common/defines.h>
+#include <px4_platform_common/time.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <signal.h>
+#include <errno.h>
+#include <unistd.h>
+#include <parameters/param.h>
+#include "hrt_work.h"
+#include <drivers/drv_hrt.h>
+#include <pthread.h>
+#include <px4_platform_common/init.h>
 
-#include "LockGuard.hpp"
+extern pthread_t _shell_task_id;
 
-template<class T, size_t N>
-class BlockingQueue
+__BEGIN_DECLS
+
+long PX4_TICKS_PER_SEC = 1000L;
+//void fsync(int fd) { return; } TODO: DONGHEE  use vxworks library
+uint32_t crc32part(const uint8_t *src, size_t len, uint32_t crc32val) { return 1; }
+
+__END_DECLS
+
+namespace px4
 {
-public:
 
-	BlockingQueue()
-	{
-		px4_sem_init(&_sem_head, 0, N);
-		px4_sem_init(&_sem_tail, 0, 0);
-		px4_sem_setprotocol(&_sem_head, SEM_PRIO_NONE);
-		px4_sem_setprotocol(&_sem_tail, SEM_PRIO_NONE);
-	}
+void init_once();
 
-	~BlockingQueue()
-	{
-		px4_sem_destroy(&_sem_head);
-		px4_sem_destroy(&_sem_tail);
-	}
+void init_once()
+{
+	_shell_task_id = pthread_self();
 
-	void push(T newItem)
-	{
-		do {} while (px4_sem_wait(&_sem_head) != 0);
+	work_queues_init();
+	hrt_work_queue_init();
 
-		_data[_tail] = newItem;
-		_tail = (_tail + 1) % N;
+	px4_platform_init();
+}
 
-		px4_sem_post(&_sem_tail);
-	}
+void init(int argc, char *argv[], const char *app_name)
+{
+	printf("\n");
+	printf("______  __   __    ___ \n");
+	printf("| ___ \\ \\ \\ / /   /   |\n");
+	printf("| |_/ /  \\ V /   / /| |\n");
+	printf("|  __/   /   \\  / /_| |\n");
+	printf("| |     / /^\\ \\ \\___  |\n");
+	printf("\\_|     \\/   \\/     |_/\n");
+	printf("\n");
+	printf("%s starting.\n", app_name);
+	printf("\n");
 
-	T pop()
-	{
-		do {} while (px4_sem_wait(&_sem_tail) != 0);
+	// set the threads name
+#ifdef __PX4_DARWIN
+	(void)pthread_setname_np(app_name);
+#else
+	(void)pthread_setname_np(pthread_self(), app_name);
+#endif
+}
 
-		T ret = _data[_head];
-		_head = (_head + 1) % N;
-
-		px4_sem_post(&_sem_head);
-
-		return ret;
-	}
-
-private:
-
-	px4_sem_t	_sem_head;
-	px4_sem_t	_sem_tail;
-
-	T _data[N] {};
-
-	size_t _head{0};
-	size_t _tail{0};
-
-};
+}
