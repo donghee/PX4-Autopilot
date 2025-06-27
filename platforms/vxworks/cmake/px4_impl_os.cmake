@@ -31,17 +31,30 @@
 #
 ############################################################################
 
-#if ("$ENV{HEXAGON_SDK_ROOT}" STREQUAL "")
-#	message(FATAL_ERROR "Enviroment variable HEXAGON_SDK_ROOT must be set")
-#else()
-#	set(HEXAGON_SDK_ROOT $ENV{HEXAGON_SDK_ROOT})
-#endif()
-#
-#if ("$ENV{HEXAGON_TOOLS_ROOT}" STREQUAL "")
-#	message(FATAL_ERROR "Environment variable HEXAGON_TOOLS_ROOT must be set")
-#else()
-#	set(HEXAGON_TOOLS_ROOT $ENV{HEXAGON_TOOLS_ROOT})
-#endif()
+if ("$ENV{WIND_CC_SYSROOT}" STREQUAL "")
+  message(FATAL_ERROR "Enviroment variable WIND_CC_SYSROOT must be set")
+else()
+  set(WIND_CC_SYSROOT $ENV{WIND_CC_SYSROOT})
+endif()
+
+# set(VX_TARGET_TYPE DKM)
+set(VX_TARGET_TYPE RTP)
+set(CMAKE_TOOLCHAIN_FILE ${WIND_CC_SYSROOT}/mk/toolchain.cmake)
+set(CMAKE_VERBOSE_MAKEFILE OFF)
+set(CMAKE_WARN_DEPRECATED OFF)
+# set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+set(CMAKE_CXX_FLAGS "-U_POSIX_C_SOURCE")
+set(CMAKE_C_FLAGS "-U_POSIX_C_SOURCE")
+
+if (VX_TARGET_TYPE STREQUAL "DKM")
+  set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} -dkm")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -dkm")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -dkm")
+
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-writable-strings")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-writable-strings")
+endif()
 
 include(px4_git)
 

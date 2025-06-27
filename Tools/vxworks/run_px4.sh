@@ -7,8 +7,13 @@ set prompt "->|#|%"
 
 spawn telnet $host
 expect "Connected to"
-
 expect -re $prompt
+
+# set clock rate to 300 Hz
+send "sysClkRateSet 300\r"
+expect -re $prompt
+
+# cmd shell
 send "cmd\r"
 expect -re $prompt
 
