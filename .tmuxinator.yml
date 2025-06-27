@@ -4,7 +4,10 @@ windows:
   - editor:
       layout: main-vertical
       panes:
-        - vim platforms/vxworks/src/px4/main.cpp
+        - vim platforms/vxworks/src/px4/common/main.cpp
+  - shell:
+      layout: main-vertical
+      panes:
         - Tools/vxworks/build_px4_using_docker.sh
   - running:
       layout: main-vertical
@@ -19,4 +22,8 @@ windows:
       layout: main-vertical
       panes:
         - telnet 192.168.5.61
- 
+  - simulator:
+      layout: main-vertical
+      panes:
+        - mavproxy.py --master=udpout:192.168.5.61:14560 --out=udp:0.0.0.0:14550 --out=udp:0.0.0.0:14560
+        - HEADLESS=1 ./Tools/simulation/jmavsim/jmavsim_run.sh -q -s -u -p 14560 -r 250
