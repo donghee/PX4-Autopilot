@@ -10,7 +10,9 @@ expect "Connected to"
 expect -re $prompt
 
 # set clock rate to 300 Hz
-send "sysClkRateSet 300\r"
+# send "sysClkRateSet 300\r"
+# set clock rate to 2000 Hz
+send "sysClkRateSet 2000\r"
 expect -re $prompt
 
 # cmd shell

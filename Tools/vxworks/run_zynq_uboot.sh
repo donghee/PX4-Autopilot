@@ -33,6 +33,7 @@ expect {
 
 expect {
     "zynq-uboot>" {
+        send "setenv bootargs 'gem(0,0)host:vxWorks h=192.168.5.60 e=192.168.5.61:ffffff00 u=zynq7k pw=1234 f=0x08'\r"
         send "setenv ipaddr '192.168.5.61'\r"
         send "setenv serverip '192.168.5.60'\r"
         send "tftpboot 0x05000000 uVxWorks; tftpboot 0x04000000 zynq-zc702.dtb; bootm 0x05000000 - 0x04000000\r"
@@ -42,5 +43,10 @@ expect {
         exit 1
       }
 }
+
+# set ip
+#set prompt "->|#|%"
+#expect -re $prompt
+#send "ifconfig('gem0 192.168.5.61 up')\r"
 
 interact
