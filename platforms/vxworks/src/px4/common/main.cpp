@@ -139,7 +139,8 @@ int zynq7k_main(int argc, char * argv[]) {
 	// process_commands(apps, "param set SYS_AUTOCONFIG 1\n");
 	process_commands(apps, "param set SYS_AUTOCONFIG 0\n");
 	process_commands(apps, "param set MAV_SYS_ID 0\n");
-	process_commands(apps, "param set SYS_AUTOSTART 10017\n"); // 1001: HIL QUADROTOR X, 4001: GENERAL QUADROTOR X 10017: JMAVSIM IRIS
+	//process_commands(apps, "param set SYS_AUTOSTART 10017\n"); // 1001: HIL QUADROTOR X, 4001: GENERAL QUADROTOR X 10017: JMAVSIM IRIS, 1100: SIH Quadcopter
+	process_commands(apps, "param set SYS_AUTOSTART 1100\n"); // 1001: HIL QUADROTOR X, 4001: GENERAL QUADROTOR X 10017: JMAVSIM IRIS, 1100: SIH Quadcopter
 
 	process_commands(apps, "param set CAL_ACC0_ID 1310988\n"); // DRV_IMU_DEVTYPE_SIM, BUS: 1, ADDR: 1, TYPE: SIMULATION
 	process_commands(apps, "param set CAL_GYRO0_ID 1310988\n"); // DRV_IMU_DEVTYPE_SIM, BUS: 1, ADDR: 1, TYPE: SIMULATION
@@ -173,18 +174,30 @@ int zynq7k_main(int argc, char * argv[]) {
 	process_commands(apps, "param set-default SYS_FAILURE_EN 1\n");
 	process_commands(apps, "param set-default COM_LOW_BAT_ACT 2\n");
 
-	// process_commands(apps, "param set-default IMU_INTEG_RATE 250\n"); // For jmavsim simulator
-	process_commands(apps, "param set IMU_INTEG_RATE 250\n"); // For jmavsim simulator
+	// simulator
+	process_commands(apps, "param set SYS_HITL 2\n"); //1: HITL, 2: SIH, 0: Disabled Default
+	process_commands(apps, "param set SENS_EN_GPSSIM 1\n");
+	process_commands(apps, "param set SENS_EN_BAROSIM 1\n");
+	process_commands(apps, "param set SENS_EN_MAGSIM 1\n");
+
+	process_commands(apps, "param set PWM_MAIN_FUNC1 101\n");
+	process_commands(apps, "param set PWM_MAIN_FUNC2 102\n");
+	process_commands(apps, "param set PWM_MAIN_FUNC3 103\n");
+	process_commands(apps, "param set PWM_MAIN_FUNC4 104\n");
+	process_commands(apps, "param set SIH_VEHICLE_TYPE 0\n");
+
+	process_commands(apps, "param set IMU_INTEG_RATE 200\n"); // For jmavsim simulator
+	process_commands(apps, "param set-default IMU_INTEG_RATE 200\n"); // For jmavsim simulator
 
 	process_commands(apps, "param set COM_ARM_SDCARD 0\n");
-	process_commands(apps, "param set SYS_HAS_BARO 0\n");
+	// process_commands(apps, "param set SYS_HAS_BARO 0\n");
 	// process_commands(apps, "param set SYS_HAS_MAG 0\n");
 
 	process_commands(apps, "param set EKF2_GPS_DELAY 10\n");
 	process_commands(apps, "param set EKF2_MULTI_IMU 3\n");
 	process_commands(apps, "param set SENS_IMU_MODE 0\n");
 
-	process_commands(apps, "logger start -t -b 200\n"); // 200 bytes buffer, timestamp enabled
+	// process_commands(apps, "logger start -t -b 200\n"); // 200 bytes buffer, timestamp enabled
 
 	// process_commands(apps, "dataman start -f dataman\n"); // File
 	process_commands(apps, "dataman start -r\n"); // RAM
@@ -196,25 +209,35 @@ int zynq7k_main(int argc, char * argv[]) {
 	// process_commands(apps, "fake_magnetometer start\n");
 	
 	// simulator
+	process_commands(apps, "simulator_sih start\n");
 	process_commands(apps, "sensor_baro_sim start\n");
 	process_commands(apps, "sensor_gps_sim start\n");
 	process_commands(apps, "sensor_mag_sim start\n");
-	process_commands(apps, "sensor_airspeed_sim start\n");
-	process_commands(apps, "pwm_out_sim start\n");
-	process_commands(apps, "simulator_sih start\n");
+	//process_commands(apps, "sensor_airspeed_sim start\n");
+	//process_commands(apps, "pwm_out_sim start\n");
+	process_commands(apps, "pwm_out_sim start -m hil\n");
 	process_commands(apps, "simulator_mavlink start\n");
 
 	// ground control
-	process_commands(apps, "mavlink start -x -u 14556 -r 4000000 -f\n");
-	// process_commands(apps, "mavlink start -x -u 14556 -r 1000000 -f\n");
-	process_commands(apps, "mavlink stream -r 50 -s POSITION_TARGET_LOCAL_NED -u 14556\n");
+	// process_commands(apps, "mavlink start -x -u 14556 -r 4000000 -f\n");
+	// process_commands(apps, "mavlink stream -r 50 -s POSITION_TARGET_LOCAL_NED -u 14556\n");
 
 	// simulator mavlink
 	process_commands(apps, "mavlink start -x -u 14560 -r 4000000 -f\n");
 
+	// controller
+	process_commands(apps, "manual_control start");
+	process_commands(apps, "control_allocator start");
+	process_commands(apps, "mc_rate_control start");
+	process_commands(apps, "mc_att_control start");
+	process_commands(apps, "mc_hover_thrust_estimator start");
+	process_commands(apps, "flight_mode_manager start");
+	process_commands(apps, "mc_pos_control start");
+	process_commands(apps, "land_detector start multicopter");
+
 	process_commands(apps, "sensors start\n");
-	process_commands(apps, "commander start\n");
-	// process_commands(apps, "commander start -h\n"); // hitl
+	//process_commands(apps, "commander start\n");
+	process_commands(apps, "commander start -h\n"); // hitl
 	process_commands(apps, "navigator start\n");
 	process_commands(apps, "ekf2 start\n");
 
