@@ -310,7 +310,7 @@ private:
 	 * The result of trying to configure the receiver.
 	 */
 	enum class ConfigureResult : int32_t {
-		OK               = 0,
+		Ok               = 0,
 		FailedCompletely = 1 << 0,
 		NoLogging        = 1 << 1,
 	};
@@ -403,7 +403,7 @@ private:
 	 *
 	 * If the user has disabled automatic configuration, only execute the steps that do not touch the receiver (e.g., baud rate detection, port detection...).
 	 *
-	 * @return `ConfigureResult::OK` if configured, or error.
+	 * @return `ConfigureResult::Ok` if configured, or error.
 	 */
 	ConfigureResult configure();
 

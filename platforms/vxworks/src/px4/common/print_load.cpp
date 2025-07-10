@@ -55,7 +55,7 @@
 #endif
 
 #ifdef __PX4_VXWORKS
-// dprintf is not available on VxWorks. 
+// dprintf is not available on VxWorks.
 // #define dprintf(_fd, _text, ...) ((_fd) == 1 ? PX4_INFO((_text), ##__VA_ARGS__) : (void)(_fd))
 #define dprintf(_fd, _text, ...)
 #endif

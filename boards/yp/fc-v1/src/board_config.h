@@ -39,18 +39,25 @@
 
 #pragma once
 
+#define BOARD_OVERRIDE_UUID "YP_FC_V1" // must be of length 16
+#define PX4_SOC_ARCH_ID_YP_FC_V1 0x100B
+#define PX4_SOC_ARCH_ID PX4_SOC_ARCH_ID_YP_FC_V1
+
 #define BOARD_HAS_NO_RESET
 #define BOARD_HAS_NO_BOOTLOADER
+
+// I2C
+#define CONFIG_I2C 1
+#define PX4_NUMBER_I2C_BUSES    2
+
+// SPI
+#define CONFIG_SPI 1
 
 // Define this as empty since there are no I2C buses
 #define BOARD_I2C_BUS_CLOCK_INIT
 
 #include <system_config.h>
 #include <px4_platform_common/board_common.h>
-
-#define BOARD_OVERRIDE_UUID "YP_FC_V1" // must be of length 16
-#define PX4_SOC_ARCH_ID_YP_FC_V1 0x100B
-#define PX4_SOC_ARCH_ID PX4_SOC_ARCH_ID_YP_FC_V1
 
 //#define VOXL_ESC_DEFAULT_PORT 	"2"
 //#define VOXL2_IO_DEFAULT_PORT 	"2"
@@ -59,3 +66,15 @@
 #define system_usleep usleep
 #define sysconf(_SC_PAGESIZE) 1
 //#define CLOCK_REALTIME     0
+
+
+#ifdef  __cplusplus
+extern "C" {
+#endif
+
+// int  rc_init(void);
+// void rc_cleaning(void);
+
+#ifdef __cplusplus
+}
+#endif

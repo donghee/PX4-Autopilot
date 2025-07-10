@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (C) 2017 PX4 Development Team. All rights reserved.
+ *   Copyright (C) 2020 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,14 +30,13 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
-#pragma once
 
-#ifdef __PX4_NUTTX
-#include "nuttx/SPI.hpp"
-#elif defined(__PX4_QURT)
-#include "qurt/SPI.hpp"
-#elif defined(__PX4_VXWORKS)
-#include "vxworks/SPI.hpp"
-#else
-#include "posix/SPI.hpp"
-#endif
+#include <px4_arch/spi_hw_description.h>
+#include <drivers/drv_sensor.h>
+
+constexpr px4_spi_bus_t px4_spi_buses[SPI_BUS_MAX_BUS_ITEMS] = {
+	initSPIBus(0, {
+		initSPIDevice(DRV_ACC_DEVTYPE_BMI088, 0),
+		initSPIDevice(DRV_GYR_DEVTYPE_BMI088, 1),
+	}),
+};

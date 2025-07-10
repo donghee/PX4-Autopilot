@@ -98,25 +98,23 @@ __BEGIN_DECLS
 extern long PX4_TICKS_PER_SEC;
 __END_DECLS
 
+#ifdef __PX4_VXWORKS
+#define PX4_ROOTFSDIR "host:"
+// #define PX4_STORAGEDIR PX4_ROOTFSDIR "/data/px4"
+#define PX4_STORAGEDIR PX4_ROOTFSDIR ""
+#define PX4_O_MODE_666 666
+#define PX4_O_MODE_600 600
+#else
 #define PX4_ROOTFSDIR CONFIG_BOARD_ROOTFSDIR
-
 // Qurt doesn't have an SD card for storage
 #ifndef __PX4_QURT
 #define PX4_STORAGEDIR PX4_ROOTFSDIR
+#endif
 #endif
 
 /****************************************************************************
  * Defines for POSIX and ROS
  ****************************************************************************/
-
-#ifdef __PX4_VXWORKS
-#define PX4_O_MODE_666 0666
-#define PX4_O_MODE_600 0600
-#define PX4_ROOTFSDIR "host:"
-// #define PX4_STORAGEDIR PX4_ROOTFSDIR "/data/px4"
-#define PX4_STORAGEDIR PX4_ROOTFSDIR ""
-#endif
-
 #define OK 0
 #define ERROR -1
 #define MAX_RAND 32767

@@ -8,7 +8,7 @@
             "defines": [],
             "macFrameworkPath": [],
             "configurationProvider": "ms-vscode.cmake-tools",
-            "cppStandard": "c++14",
+            "cppStandard": "c++17",
             "cStandard": "c11",
             "forcedInclude": [
                  "@PX4_BINARY_DIR@/px4_boardconfig.h",

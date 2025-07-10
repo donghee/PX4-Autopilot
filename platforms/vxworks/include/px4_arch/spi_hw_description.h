@@ -35,12 +35,11 @@
 
 #include <px4_platform_common/spi.h>
 
-static inline constexpr px4_spi_bus_device_t initSPIDevice(uint8_t devid_driver)
+static inline constexpr px4_spi_bus_device_t initSPIDevice(uint8_t devid_driver, uint8_t cs_index)
 {
 	px4_spi_bus_device_t ret{};
 	ret.cs_gpio = 1; // set to some non-zero value to indicate this is used
-	ret.drdy_gpio = 1;
-	ret.devid = PX4_SPIDEV_ID(PX4_SPI_DEVICE_ID, 0);
+	ret.devid = PX4_SPIDEV_ID(PX4_SPI_DEVICE_ID, cs_index);
 	ret.devtype_driver = devid_driver;
 	return ret;
 }

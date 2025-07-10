@@ -41,7 +41,6 @@
 
 namespace Bosch::BMI088::Accelerometer
 {
-
 class BMI088_Accelerometer : public BMI088
 {
 public:

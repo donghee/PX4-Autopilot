@@ -44,6 +44,7 @@ set(CMAKE_VERBOSE_MAKEFILE OFF)
 set(CMAKE_WARN_DEPRECATED OFF)
 # set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_FLAGS "-U_POSIX_C_SOURCE")
 set(CMAKE_C_FLAGS "-U_POSIX_C_SOURCE")
 
@@ -144,27 +145,28 @@ function(px4_os_add_flags)
 
   # TODO: DONGHEE delete PX4_POSIX?
 	add_definitions(
-    -D__PX4_POSIX 
+    -D__PX4_POSIX
     -D__PX4_VXWORKS
 	)
 
   add_compile_options(
-  	-Wno-error=implicit-float-conversion 
-    -Wno-error=overloaded-virtual 
-    -Wno-error=implicit-int-conversion 
-    -Wno-error=float-conversion 
-    -Wno-error=shorten-64-to-32 
-    -Wno-error=macro-redefined 
-    -Wno-error=cast-align 
-    -Wno-error=sign-compare 
-    -Wno-error=unused-const-variable 
-    -Wno-error=strict-prototypes 
-    -frtti 
+  	-Wno-error=implicit-float-conversion
+    -Wno-error=overloaded-virtual
+    -Wno-error=implicit-int-conversion
+    -Wno-error=float-conversion
+    -Wno-error=shorten-64-to-32
+    -Wno-error=macro-redefined
+    -Wno-error=cast-align
+    -Wno-error=sign-compare
+    -Wno-error=unused-const-variable
+    -Wno-error=strict-prototypes
+    -frtti
     -U_POSIX_C_SOURCE
   	-fPIC
   	-fmath-errno
     -Wno-unknown-warning-option
     -Wno-cast-align
+    -Wno-inconsistent-missing-override
     --include=${PX4_SOURCE_DIR}/platforms/vxworks/include/vxworks_reqs.h
   )
 

@@ -253,9 +253,9 @@ int SeptentrioDriver::print_status()
 		break;
 	}
 
-	PX4_INFO("health: %s, port: %s, baud rate: %lu", is_healthy() ? "OK" : "NOT OK", _port, _uart.getBaudrate());
-	PX4_INFO("controller -> receiver data rate: %lu B/s", output_data_rate());
-	PX4_INFO("receiver -> controller data rate: %lu B/s", input_data_rate());
+	PX4_INFO("health: %s, port: %s, baud rate: %u", is_healthy() ? "OK" : "NOT OK", _port, _uart.getBaudrate());
+	PX4_INFO("controller -> receiver data rate: %u B/s", output_data_rate());
+	PX4_INFO("receiver -> controller data rate: %u B/s", input_data_rate());
 	PX4_INFO("sat info: %s", (_message_satellite_info != nullptr) ? "enabled" : "disabled");
 
 	if (first_gps_uorb_message_created() && _state == State::ReceivingData) {
@@ -272,10 +272,12 @@ int SeptentrioDriver::print_status()
 
 void SeptentrioDriver::run()
 {
+	printf("\n pre Run");
 	while (!should_exit()) {
 		switch (_state) {
 		case State::OpeningSerialPort: {
 				_uart.setPort(_port);
+				printf("\n pre open \n ");
 
 				if (_uart.open()) {
 					_state = State::DetectingBaudRate;
@@ -313,6 +315,8 @@ void SeptentrioDriver::run()
 
 		case State::ConfiguringDevice: {
 				ConfigureResult result = configure();
+
+				PX4_INFO("pre ConfiguringDevice");
 
 				if (!(static_cast<int32_t>(result) & static_cast<int32_t>(ConfigureResult::FailedCompletely))) {
 					if (static_cast<int32_t>(result) & static_cast<int32_t>(ConfigureResult::NoLogging)) {
@@ -366,7 +370,7 @@ int SeptentrioDriver::task_spawn(int argc, char *argv[])
 int SeptentrioDriver::task_spawn(int argc, char *argv[], Instance instance)
 {
 	px4_main_t entry_point;
-	static constexpr int k_task_stack_size = PX4_STACK_ADJUSTED(2048);
+	static constexpr int k_task_stack_size = 2048;	//PX4_STACK_ADJUSTED(2048);
 
 	if (instance == Instance::Main) {
 		entry_point = &run_trampoline;
@@ -374,6 +378,10 @@ int SeptentrioDriver::task_spawn(int argc, char *argv[], Instance instance)
 	} else {
 		entry_point = &run_trampoline_secondary;
 	}
+
+	printf ("\n SeptentrioDriver::task_spawn %d / %d / %d / %p \n", SCHED_DEFAULT, SCHED_PRIORITY_SLOW_DRIVER, k_task_stack_size, entry_point);
+	printf ("\n SeptentrioDriver::task_spawn %d / %d / %d / %p \n", SCHED_DEFAULT, SCHED_PRIORITY_SLOW_DRIVER, k_task_stack_size, entry_point);
+	px4_sleep(1);
 
 	px4_task_t task_id = px4_task_spawn_cmd("septentrio",
 						SCHED_DEFAULT,
@@ -458,7 +466,7 @@ SeptentrioDriver *SeptentrioDriver::instantiate(int argc, char *argv[], Instance
 	}
 
 	if (!valid_chosen_baud_rate) {
-		mavlink_log_critical(&k_mavlink_log_pub, "Septentrio: Baud rate %d is unsupported, falling back to default %lu",
+		mavlink_log_critical(&k_mavlink_log_pub, "Septentrio: Baud rate %d is unsupported, falling back to default %u",
 				     instance == Instance::Main ? arguments.baud_rate_main : arguments.baud_rate_secondary, k_default_baud_rate);
 	}
 
@@ -805,7 +813,7 @@ SeptentrioDriver::ConfigureResult SeptentrioDriver::configure()
 {
 	char msg[k_max_command_size] {};
 	char com_port[5] {};
-	ConfigureResult result {ConfigureResult::OK};
+	ConfigureResult result {ConfigureResult::Ok};
 
 	// Passively detect receiver port.
 	if (detect_serial_port(com_port) != PX4_OK) {
@@ -816,7 +824,7 @@ SeptentrioDriver::ConfigureResult SeptentrioDriver::configure()
 	// We should definitely match baud rates and detect used port, but don't do other configuration if not requested.
 	// This will force input on the receiver. That shouldn't be a problem as it's on our own connection.
 	if (!_automatic_configuration) {
-		return ConfigureResult::OK;
+		return ConfigureResult::Ok;
 	}
 
 	// If user requested specific baud rate, set it now. Otherwise keep detected baud rate.

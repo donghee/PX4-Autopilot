@@ -41,7 +41,6 @@
 
 namespace Bosch::BMI088::Gyroscope
 {
-
 class BMI088_Gyroscope : public BMI088
 {
 public:

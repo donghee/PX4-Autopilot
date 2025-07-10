@@ -68,10 +68,15 @@ typedef int px4_task_t;
 #define SCHED_DEFAULT	SCHED_FIFO
 
 #if defined(__PX4_LINUX) || defined(__PX4_DARWIN) || defined(__PX4_CYGWIN) || defined(__PX4_ROS2)
-
 #define SCHED_PRIORITY_MAX sched_get_priority_max(SCHED_FIFO)
 #define SCHED_PRIORITY_MIN sched_get_priority_min(SCHED_FIFO)
 #define SCHED_PRIORITY_DEFAULT (((sched_get_priority_max(SCHED_FIFO) - sched_get_priority_min(SCHED_FIFO)) / 2) + sched_get_priority_min(SCHED_FIFO))
+
+#elif defined(__PX4_VXWORKS)
+#define SCHED_PRIORITY_MAX 255 // TODO: DONGHEE check this MAX value
+#define SCHED_PRIORITY_MIN 0
+#define SCHED_PRIORITY_DEFAULT 20
+#endif
 
 #elif defined(__PX4_QURT)
 
@@ -79,10 +84,6 @@ typedef int px4_task_t;
 #define SCHED_PRIORITY_MIN 0
 #define SCHED_PRIORITY_DEFAULT 20
 
-#elif defined(__PX4_VXWORKS)
-#define SCHED_PRIORITY_MAX 255 // TODO: DONGHEE check this MAX value
-#define SCHED_PRIORITY_MIN 0
-#define SCHED_PRIORITY_DEFAULT 20
 #else
 #error "No target OS defined"
 #endif
@@ -99,10 +100,6 @@ typedef struct {
 	int argc;
 	char **argv;
 } px4_task_args_t;
-
-#else
-#error "No target OS defined"
-#endif
 
 // PX4 work queue starting high priority
 #define PX4_WQ_HP_BASE (SCHED_PRIORITY_MAX - 15)

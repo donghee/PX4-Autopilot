@@ -42,6 +42,13 @@
 #define BOARD_HAS_NO_RESET
 #define BOARD_HAS_NO_BOOTLOADER
 
+// I2C
+#define CONFIG_I2C 1
+#define PX4_NUMBER_I2C_BUSES    2
+
+// SPI
+#define CONFIG_SPI 1
+
 // Define this as empty since there are no I2C buses
 #define BOARD_I2C_BUS_CLOCK_INIT
 
