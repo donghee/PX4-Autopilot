@@ -214,7 +214,7 @@ typedef struct    /* describes a single SPI ioctl transfer message type */
 
 
 /* I2C message flags */
-#define VX_IOCG_I2C         'i'
+#define VX_IOCG_ZYNQ_DEV         'Z'
 
 #define I2C_M_WR            0x0000      /* write data, from master to slave */
 #define I2C_M_RD            0x0001      /* read data, from slave to master */
@@ -224,11 +224,10 @@ struct i2c_msg {
     uint16_t addr;  /* Slave address, either seven or ten bits. When this is */
                     /* a ten bit address, I2C_M_TEN must be set in flags */
                     /* field and the driver must support ten bits */
-    uint32_t flags; /* flags for the message */
     uint32_t len;   /* number of data bytes in buf being read from or written */
-                    /* to the I2C slave device */
     uint8_t *buf;   /* the buffer into which data is read, or from which */
                     /* it's written */
+    uint32_t flags; /* flags for the message */
     uint32_t wrTime;  /* Write Cycle Time if necessary */
     uint32_t scl;     /* SCL Clock Frequency, 0 means use controller's default */
 };
@@ -249,6 +248,12 @@ struct i2c_ops_s
 };
 #endif
 
+typedef	struct i2c_data{
+   	uint8_t		cmd;	/* iic command or register offset */
+   	char *	    buf;	/* data buffer */
+   	size_t		cnt;	/* data length */
+} I2C_DATA;
+
 struct i2c_rdwr_ioctl_data {
      struct i2c_msg *msgs;    /* pointers to i2c_msgs */
      uint32_t nmsgs;           /* number of i2c_msgs */
@@ -258,5 +263,12 @@ struct i2c_rdwr_ioctl_data {
  //   ((((N)*(sizeof (struct i2c_rdwr_ioctl_data))) < IOCPARM_MAX) \
  //   ? ((N)*(sizeof (struct i2c_rdwr_ioctl_data))) : 0)
 
-// #define I2C_RDWR_MESSAGE(N)    _IOW(VX_IOCG_I2C, 150, char [I2C_MSGSIZE(N)])
-#define I2C_RDWR	_IOW(VX_IOCG_I2C, 150, long)	/* Combined R/W transfer (one STOP only) */
+    /* I2C_0 (baro) */
+#define	IIC_BARO_REG_SET		_IOW(VX_IOCG_ZYNQ_DEV, 1, sizeof(I2C_DATA))
+#define	IIC_BARO_REG_GET		_IOR(VX_IOCG_ZYNQ_DEV, 2, sizeof(I2C_DATA))
+
+    /* I2C_1 (mag) */
+#define	IIC_MAG_REG_SET			_IOW(VX_IOCG_ZYNQ_DEV, 3, sizeof(I2C_DATA))
+#define	IIC_MAG_REG_GET			_IOR(VX_IOCG_ZYNQ_DEV, 4, sizeof(I2C_DATA))
+
+#define	IIC_TRANSFER	_IOR(VX_IOCG_ZYNQ_DEV, 5, sizeof(struct i2c_rdwr_ioctl_data))

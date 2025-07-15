@@ -147,14 +147,14 @@ I2C::transfer(const uint8_t *send, const unsigned send_len, uint8_t *recv, const
 	}
 
 	do {
-		DEVICE_DEBUG("transfer FD: %d out %p/%u  in %p/%u msg %x/%x", _fd, send, send_len, recv, recv_len, get_device_address(), I2C_RDWR);
+		DEVICE_DEBUG("transfer FD: %d out %p/%u  in %p/%u msg %x/%x", _fd, send, send_len, recv, recv_len, get_device_address(), IIC_TRANSFER);
 
 		unsigned msgs = 0;
 		struct i2c_msg msgv[2] {};
 
 		if (send_len > 0) {
 			msgv[msgs].addr = get_device_address();
-			msgv[msgs].flags = 0;
+			msgv[msgs].flags = I2C_M_WR;
 			msgv[msgs].buf = const_cast<uint8_t *>(send);
 			msgv[msgs].len = send_len;
 			msgs++;
@@ -176,7 +176,9 @@ I2C::transfer(const uint8_t *send, const unsigned send_len, uint8_t *recv, const
 		packets.msgs  = msgv;
 		packets.nmsgs = msgs;
 
-		int ret_ioctl = ::ioctl(_fd, I2C_RDWR, (unsigned long)&packets);
+		int ret_ioctl = -1;
+
+		ret_ioctl = ::ioctl(_fd, IIC_TRANSFER, (unsigned long)&packets);
 
 		if (ret_ioctl == -1) {
 			DEVICE_DEBUG("I2C transfer failed");

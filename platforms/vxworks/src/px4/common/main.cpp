@@ -207,16 +207,17 @@ int zynq7k_main(int argc, char * argv[]) {
 	// process_commands(apps, "fake_imu start\n");
 	// process_commands(apps, "fake_gps start\n");
 	// process_commands(apps, "fake_magnetometer start\n");
-	
+	process_commands(apps, "rm3100 start -X 1\n");
+	process_commands(apps, "ms5611 start -X 0\n");
+
 	// simulator
-	process_commands(apps, "simulator_sih start\n");
-	process_commands(apps, "sensor_baro_sim start\n");
-	process_commands(apps, "sensor_gps_sim start\n");
-	process_commands(apps, "sensor_mag_sim start\n");
+	//process_commands(apps, "sensor_baro_sim start\n");
+	//process_commands(apps, "sensor_gps_sim start\n");
+	//process_commands(apps, "sensor_mag_sim start\n");
 	//process_commands(apps, "sensor_airspeed_sim start\n");
 	//process_commands(apps, "pwm_out_sim start\n");
-	process_commands(apps, "pwm_out_sim start -m hil\n");
-	process_commands(apps, "simulator_mavlink start\n");
+	//process_commands(apps, "simulator_sih start\n");
+	//process_commands(apps, "simulator_mavlink start\n");
 
 	// ground control
 	// process_commands(apps, "mavlink start -x -u 14556 -r 4000000 -f\n");

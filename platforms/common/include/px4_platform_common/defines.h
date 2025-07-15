@@ -99,7 +99,7 @@ extern long PX4_TICKS_PER_SEC;
 __END_DECLS
 
 #ifdef __PX4_VXWORKS
-#define PX4_ROOTFSDIR "host:"
+#define PX4_ROOTFSDIR "/sd0a/"//"host:"
 // #define PX4_STORAGEDIR PX4_ROOTFSDIR "/data/px4"
 #define PX4_STORAGEDIR PX4_ROOTFSDIR ""
 #define PX4_O_MODE_666 666

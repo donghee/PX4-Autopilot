@@ -380,7 +380,6 @@ int SeptentrioDriver::task_spawn(int argc, char *argv[], Instance instance)
 	}
 
 	printf ("\n SeptentrioDriver::task_spawn %d / %d / %d / %p \n", SCHED_DEFAULT, SCHED_PRIORITY_SLOW_DRIVER, k_task_stack_size, entry_point);
-	printf ("\n SeptentrioDriver::task_spawn %d / %d / %d / %p \n", SCHED_DEFAULT, SCHED_PRIORITY_SLOW_DRIVER, k_task_stack_size, entry_point);
 	px4_sleep(1);
 
 	px4_task_t task_id = px4_task_spawn_cmd("septentrio",
