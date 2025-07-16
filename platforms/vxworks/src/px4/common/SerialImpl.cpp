@@ -35,7 +35,9 @@
 #include <string.h> // strncpy
 #include <px4_log.h>
 //#include <drivers/device/qurt/uart.h>
+#include <fcntl.h>
 #include <drivers/drv_hrt.h>
+#include <poll.h>
 
 namespace device
 {
@@ -63,21 +65,18 @@ SerialImpl::~SerialImpl()
 	}
 }
 
-bool SerialImpl::validateBaudrate(uint32_t baudrate)
+bool SerialImpl::configure()
 {
-	if ((baudrate != 9600)   &&
-	    (baudrate != 38400)  &&
-	    (baudrate != 57600)  &&
-	    (baudrate != 115200) &&
-	    (baudrate != 230400) &&
-	    (baudrate != 250000) &&
-	    (baudrate != 420000) &&
-	    (baudrate != 460800) &&
-	    (baudrate != 921600) &&
-	    (baudrate != 1000000) &&
-	    (baudrate != 1843200) &&
-	    (baudrate != 2000000)) {
-		return false;
+	/* process baud rate */
+	int speed = _baudrate;
+
+	/* set baud rate */
+	if (_open) {
+		::ioctl(_serial_fd, FIOBAUDRATE, speed);
+		::ioctl(_serial_fd, FIORBUFSET, R_BUFFER_SIZE);
+		::ioctl(_serial_fd, FIOWBUFSET, W_BUFFER_SIZE);
+		::ioctl(_serial_fd, FIOOPTIONS, OPT_RAW);
+		::ioctl(_serial_fd, FIOFLUSH, 0);
 	}
 
 	return true;
@@ -87,33 +86,8 @@ bool SerialImpl::open()
 {
 	// There's no harm in calling open multiple times on the same port.
 	// In fact, that's the only way to change the baudrate
-
-	_open = false;
-	_serial_fd = -1;
-
-	if (! validateBaudrate(_baudrate)) {
-		PX4_ERR("Invalid baudrate: %u", _baudrate);
-		return false;
-	}
-
-	if (_bytesize != ByteSize::EightBits) {
-		PX4_ERR("Qurt platform only supports ByteSize::EightBits");
-		return false;
-	}
-
-	if (_parity != Parity::None) {
-		PX4_ERR("Qurt platform only supports Parity::None");
-		return false;
-	}
-
-	if (_stopbits != StopBits::One) {
-		PX4_ERR("Qurt platform only supports StopBits::One");
-		return false;
-	}
-
-	if (_flowcontrol != FlowControl::Disabled) {
-		PX4_ERR("Qurt platform only supports FlowControl::Disabled");
-		return false;
+	if (isOpen()) {
+		return true;
 	}
 
 	if (!validatePort(_port)) {
@@ -121,22 +95,32 @@ bool SerialImpl::open()
 		return false;
 	}
 
-	// qurt_uart_open will check validity of port and baudrate
-	//int serial_fd = qurt_uart_open(_port, _baudrate);
-	// TODO: DONGHEE check open function in vxworks
-	// int serial_fd = ::open(_port, O_RDWR | O_NOCTTY | O_NONBLOCK);
-	int serial_fd = 0;
+	int serial_fd = ::open(_port, O_RDWR | O_NOCTTY | O_NONBLOCK);
 
 	if (serial_fd < 0) {
-		PX4_ERR("failed to open %s, fd returned: %d", _port, serial_fd);
+		PX4_ERR("failed to open %s ", _port);
 		return false;
-
-	} else {
-		PX4_INFO("Successfully opened UART %s with baudrate %u", _port, _baudrate);
 	}
 
 	_serial_fd = serial_fd;
+
+	// Configure the serial port
+	if (! configure()) {
+		PX4_ERR("failed to configure %s ", _port);
+		return false;
+	}
+
 	_open = true;
+
+	if (_single_wire_mode) {
+		setSingleWireMode();
+	}
+
+	if (_swap_rx_tx_mode) {
+		setSwapRxTxMode();
+	}
+
+	setInvertedMode(_inverted_mode);
 
 	return _open;
 }
@@ -148,10 +132,9 @@ bool SerialImpl::isOpen() const
 
 bool SerialImpl::close()
 {
-	// No close defined for qurt uart yet
-	// if (_serial_fd >= 0) {
-	// 	qurt_uart_close(_serial_fd);
-	// }
+	if (_serial_fd >= 0) {
+		::close(_serial_fd);
+	}
 
 	_serial_fd = -1;
 	_open = false;
@@ -167,15 +150,14 @@ ssize_t SerialImpl::read(uint8_t *buffer, size_t buffer_size)
 	}
 
 	// TODO: DONGHEE implement read function in vxworks
-	// int ret_read = qurt_uart_read(_serial_fd, (char *) buffer, buffer_size, 100);
-	int ret_read = 0;
+	int ret = ::read(_serial_fd, buffer, buffer_size);
 
-	if (ret_read < 0) {
-		PX4_DEBUG("%s read error %d", _port, ret_read);
+	if (ret < 0) {
+		PX4_DEBUG("%s read error %d", _port, ret);
 
 	}
 
-	return ret_read;
+	return ret;
 }
 
 ssize_t SerialImpl::readAtLeast(uint8_t *buffer, size_t buffer_size, size_t character_count, uint32_t timeout_us)
@@ -193,54 +175,37 @@ ssize_t SerialImpl::readAtLeast(uint8_t *buffer, size_t buffer_size, size_t char
 	const hrt_abstime start_time_us = hrt_absolute_time();
 	int total_bytes_read = 0;
 
-	while (total_bytes_read < (int) character_count) {
+	while ((total_bytes_read < (int) character_count) && (hrt_elapsed_time(&start_time_us) < timeout_us)) {
+		// Poll for incoming UART data.
+		pollfd fds[1];
+		fds[0].fd = _serial_fd;
+		fds[0].events = POLLIN;
 
-		if (timeout_us > 0) {
-			const uint64_t elapsed_us = hrt_elapsed_time(&start_time_us);
+		hrt_abstime remaining_time = timeout_us - hrt_elapsed_time(&start_time_us);
 
-			if (elapsed_us >= timeout_us) {
-				// If there was a partial read but not enough to satisfy the minimum then they will be lost
-				// but this really should never happen when everything is working normally.
-				// PX4_WARN("%s timeout %d bytes read (%llu us elapsed)", __FUNCTION__, total_bytes_read, elapsed_us);
-				// Or, instead of returning an error, should we return the number of bytes read (assuming it is greater than zero)?
-				return total_bytes_read;
+		if (remaining_time <= 0) { break; }
+
+		int ret = poll(fds, sizeof(fds) / sizeof(fds[0]), remaining_time);
+
+		if (ret > 0) {
+			if (fds[0].revents & POLLIN) {
+				const unsigned sleeptime = character_count * 1000000 / (_baudrate / 10);
+				px4_usleep(sleeptime);
+
+				ret = read(&buffer[total_bytes_read], buffer_size - total_bytes_read);
+
+				if (ret > 0) {
+					total_bytes_read += ret;
+				}
+
+			} else {
+				PX4_ERR("Got a poll error");
+				return -1;
 			}
 		}
-
-		int current_bytes_read = read(&buffer[total_bytes_read], buffer_size - total_bytes_read);
-
-		if (current_bytes_read < 0) {
-			// Again, if there was a partial read but not enough to satisfy the minimum then they will be lost
-			// but this really should never happen when everything is working normally.
-			PX4_ERR("%s failed to read uart", __FUNCTION__);
-			// Or, instead of returning an error, should we return the number of bytes read (assuming it is greater than zero)?
-			return -1;
-		}
-
-		// Current bytes read could be zero
-		total_bytes_read += current_bytes_read;
-
-		// If we have at least reached our desired minimum number of characters
-		// then we can return now
-		if (total_bytes_read >= (int) character_count) {
-			return total_bytes_read;
-		}
-
-		// Wait a set amount of time before trying again or the remaining time
-		// until the timeout if we are getting close
-		const uint64_t elapsed_us = hrt_elapsed_time(&start_time_us);
-		int64_t time_until_timeout = timeout_us - elapsed_us;
-		uint64_t time_to_sleep = 5000;
-
-		if ((time_until_timeout >= 0) &&
-		    (time_until_timeout < (int64_t) time_to_sleep)) {
-			time_to_sleep = time_until_timeout;
-		}
-
-		px4_usleep(time_to_sleep);
 	}
 
-	return -1;
+	return total_bytes_read;
 }
 
 ssize_t SerialImpl::write(const void *buffer, size_t buffer_size)
@@ -251,15 +216,15 @@ ssize_t SerialImpl::write(const void *buffer, size_t buffer_size)
 	}
 
 	// TODO: DONGHEE implement write function in vxworks
-	// int ret_write = qurt_uart_write(_serial_fd, (const char *) buffer, buffer_size);
-	int ret_write = 0;
+	int written = ::write(_serial_fd, buffer, buffer_size);
+	::fsync(_serial_fd);
 
-	if (ret_write < 0) {
-		PX4_ERR("%s write error %d", _port, ret_write);
+	if (written < 0) {
+		PX4_ERR("%s write error %d", _port, written);
 
 	}
 
-	return ret_write;
+	return written;
 }
 
 void SerialImpl::flush()
@@ -275,8 +240,8 @@ const char *SerialImpl::getPort() const
 bool SerialImpl::validatePort(const char *port)
 {
 	// TODO: DONGHEE implement validatePort function in vxworks
-	// return (qurt_uart_get_port(port) >= 0);
-	return true;
+	return (port && (access(port, R_OK | W_OK) == 0));
+	//return true;
 }
 
 bool SerialImpl::setPort(const char *port)
@@ -302,13 +267,8 @@ uint32_t SerialImpl::getBaudrate() const
 
 bool SerialImpl::setBaudrate(uint32_t baudrate)
 {
-	if (! validateBaudrate(baudrate)) {
-		PX4_ERR("Invalid baudrate: %u", baudrate);
-		return false;
-	}
-
 	// check if already configured
-	if (baudrate == _baudrate) {
+	if ((baudrate == _baudrate) && _open) {
 		return true;
 	}
 
@@ -316,7 +276,7 @@ bool SerialImpl::setBaudrate(uint32_t baudrate)
 
 	// process baud rate change now if port is already open
 	if (_open) {
-		return open();
+		return configure();
 	}
 
 	return true;
@@ -364,34 +324,67 @@ bool SerialImpl::setFlowcontrol(FlowControl flowcontrol)
 
 bool SerialImpl::getSingleWireMode() const
 {
-	return false;
+	return _single_wire_mode;
 }
 
 bool SerialImpl::setSingleWireMode()
 {
-	// Qurt platform does not support single wire mode
+#if defined(TIOCSSINGLEWIRE)
+
+	if (_open) {
+		ioctl(_serial_fd, TIOCSSINGLEWIRE, SER_SINGLEWIRE_ENABLED);
+	}
+
+	_single_wire_mode = true;
+	return true;
+#else
 	return false;
+#endif // TIOCSSINGLEWIRE
 }
 
 bool SerialImpl::getSwapRxTxMode() const
 {
-	return false;
+	return _swap_rx_tx_mode;
 }
 
 bool SerialImpl::setSwapRxTxMode()
 {
-	// Qurt platform does not support swap rx tx mode
+#if defined(TIOCSSWAP)
+
+	if (_open) {
+		ioctl(_serial_fd, TIOCSSWAP, SER_SWAP_ENABLED);
+	}
+
+	_swap_rx_tx_mode = true;
+	return true;
+#else
 	return false;
+#endif // TIOCSSWAP
+}
+
+bool SerialImpl::getInvertedMode() const
+{
+	return _inverted_mode;
 }
 
 bool SerialImpl::setInvertedMode(bool enable)
 {
-	// Qurt platform does not support inverted mode
-	return false == enable;
-}
-bool SerialImpl::getInvertedMode() const
-{
-	return false;
+#if defined(TIOCSINVERT)
+
+	if (_open) {
+		if (enable) {
+			ioctl(_serial_fd, TIOCSINVERT, SER_INVERT_ENABLED_RX | SER_INVERT_ENABLED_TX);
+
+		} else {
+			ioctl(_serial_fd, TIOCSINVERT, 0);
+		}
+	}
+
+	_inverted_mode = enable;
+	return true;
+#else
+	return _inverted_mode == enable;
+#endif // TIOCSINVERT
 }
 
 } // namespace device

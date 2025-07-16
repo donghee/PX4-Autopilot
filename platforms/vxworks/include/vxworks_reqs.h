@@ -272,3 +272,75 @@ struct i2c_rdwr_ioctl_data {
 #define	IIC_MAG_REG_GET			_IOR(VX_IOCG_ZYNQ_DEV, 4, sizeof(I2C_DATA))
 
 #define	IIC_TRANSFER	_IOR(VX_IOCG_ZYNQ_DEV, 5, sizeof(struct i2c_rdwr_ioctl_data))
+
+/* tty IO ioctl */
+/* #define FIONREAD        VX_IOR(GENERIC, 1, R, int) moved to filio.h */
+#define FIOFLUSH        2   /* flush any chars in buffers */
+#define FIOOPTIONS      3   /* set options (FIOSETOPTIONS) */
+#define FIOBAUDRATE     4   /* set serial baud rate */
+#define FIODISKFORMAT   5   /* format disk */
+#define FIODISKINIT     6   /* initialize disk directory */
+#define FIOSEEK         7   /* set current file char position */
+#define FIOWHERE        8   /* get current file char position */
+#define FIODIRENTRY     9   /* return a directory entry (obsolete)*/
+#define FIORENAME       10  /* rename a directory entry */
+#define FIOREADYCHANGE  11  /* return TRUE if there has been a
+                               media change on the device */
+#define FIONWRITE       12  /* get num chars still to be written */
+#define FIODISKCHANGE   13  /* set a media change on the device */
+#define FIOCANCEL       14  /* cancel read or write on the device */
+#define FIOSQUEEZE      15  /* OBSOLETED since RT11 is obsoleted */
+/* #define FIONBIO         VX_IOW(GENERIC, 16, W, int) moved to filio.h */
+#define FIONMSGS        17  /* return num msgs in pipe */
+#define FIOGETNAME      18  /* return file name in arg */
+#define FIOGETOPTIONS   19  /* get options */
+#define FIOSETOPTIONS   FIOOPTIONS  /* set options */
+#define FIOISATTY       20  /* is a tty */
+#define FIOSYNC         21  /* sync to disk */
+#define FIOPROTOHOOK    22  /* specify protocol hook routine */
+#define FIOPROTOARG     23  /* specify protocol argument */
+#define FIORBUFSET      24  /* alter the size of read buffer  */
+#define FIOWBUFSET      25  /* alter the size of write buffer */
+#define FIORFLUSH       26  /* flush any chars in read buffers */
+#define FIOWFLUSH       27  /* flush any chars in write buffers */
+#define FIOSELECT       28  /* wake up process in select on I/O */
+#define FIOUNSELECT     29  /* wake up process in select on I/O */
+#define FIONFREE        30  /* get free byte count on device */
+#define FIOMKDIR        31  /* create a directory */
+#define FIORMDIR        32  /* remove a directory */
+#define FIOLABELGET     33  /* get volume label */
+#define FIOLABELSET     34  /* set volume label */
+#define FIOATTRIBSET    35  /* set file attribute */
+#define FIOCONTIG       36  /* allocate contiguous space */
+#define FIOREADDIR      37  /* read a directory entry (POSIX) */
+#define FIOUNMOUNT      39  /* unmount disk volume */
+#define FIOSCSICOMMAND  40  /* issue a SCSI command */
+#define FIONCONTIG      41  /* get size of max contig area on dev */
+#define FIOTRUNC        42  /* truncate file to specified length */
+#define FIOGETFL        43  /* get file mode, like fcntl(F_GETFL) */
+#define FIOTIMESET      44  /* change times on a file for utime() */
+#define FIOINODETONAME  45  /* given inode number, return filename*/
+#define FIOFSTATFSGET   46  /* get file system status info */
+#define FIOMOVE         47  /* move file, ala mv, (mv not rename) */
+
+#define OPT_ECHO        0x01    /* echo input */
+#define OPT_CRMOD       0x02    /* lf -> crlf */
+#define OPT_TANDEM      0x04    /* ^S/^Q flow control protocol */
+#define OPT_7_BIT       0x08    /* strip parity bit from 8 bit input */
+#define OPT_MON_TRAP    0x10    /* enable trap to monitor */
+#define OPT_ABORT       0x20    /* enable shell restart */
+#define OPT_LINE        0x40    /* enable basic line protocol */
+#define OPT_XANY        0x80    /* enable XANY for OPT_TANDEM */
+
+#define OPT_LINE_PART 0x8000    /* In line mode, deliver a partial   */
+                                /* line that reaches maximum length. */
+                                /* This was an old behavior previous */
+                                /* to VxWorks 6.2.                   */
+
+#define OPT_RAW         0       /* raw mode */
+
+#define OPT_TERMINAL    (OPT_ECHO | OPT_CRMOD | OPT_TANDEM | \
+                         OPT_MON_TRAP | OPT_7_BIT | OPT_ABORT | OPT_LINE)
+
+#define CONTIG_MAX      0xFFFFFFFFUL      /* "count" for FIOCONTIG if requesting
+                                             maximum contiguous space on dev */

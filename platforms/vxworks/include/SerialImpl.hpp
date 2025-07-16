@@ -45,6 +45,9 @@ using device::SerialConfig::FlowControl;
 namespace device
 {
 
+#define R_BUFFER_SIZE	4096
+#define W_BUFFER_SIZE	4096
+
 class SerialImpl
 {
 public:
@@ -108,13 +111,11 @@ private:
 	StopBits _stopbits{StopBits::One};
 	FlowControl _flowcontrol{FlowControl::Disabled};
 
-	bool validateBaudrate(uint32_t baudrate);
+	bool configure();
 
-	// Mutex used to lock the read functions
-	//pthread_mutex_t read_mutex;
-
-	// Mutex used to lock the write functions
-	//pthread_mutex_t write_mutex;
+	bool _single_wire_mode{false};
+	bool _swap_rx_tx_mode{false};
+	bool _inverted_mode{false};
 };
 
 } // namespace device
