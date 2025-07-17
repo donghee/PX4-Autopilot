@@ -36,7 +36,7 @@
 
 #include "BMI088.hpp"
 
-void BMI088::print_usage()
+void Bosch1::BMI088::print_usage()
 {
 	PRINT_MODULE_USAGE_NAME("bmi088", "driver");
 	PRINT_MODULE_USAGE_SUBCATEGORY("imu");
@@ -51,7 +51,7 @@ void BMI088::print_usage()
 extern "C" int bmi088_main(int argc, char *argv[])
 {
 	int ch;
-	using ThisDriver = BMI088;
+	using ThisDriver = Bosch1::BMI088;
 	BusCLIArguments cli{false, true};
 	uint16_t type = 0;
 	cli.default_spi_frequency = 10000000;

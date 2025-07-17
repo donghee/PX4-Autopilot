@@ -30,7 +30,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
-
+//#include "BMI088.hpp"
 #include "BMI088_Accelerometer.hpp"
 
 #include <geo/geo.h> // CONSTANTS_ONE_G

@@ -40,7 +40,7 @@
 
 #include "SPI.hpp"
 
-#if true //defined(CONFIG_SPI)
+#if defined(CONFIG_SPI)
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -49,6 +49,23 @@
 #include <px4_platform_common/i2c_spi_buses.h>
 
 #if true
+static int (*register_interrupt_callback_func)(int (*)(int, void *, void *), void *arg) = NULL;
+
+int px4_arch_gpiosetevent(spi_drdy_gpio_t pin, bool r, bool f, bool e, int (*func)(int, void *, void *), void *arg)
+{
+
+	if ((register_interrupt_callback_func != NULL) && (func != NULL) && (arg != NULL)) {
+		PX4_INFO("Register interrupt %p %p %p", register_interrupt_callback_func, func, arg);
+		return register_interrupt_callback_func(func, arg);
+	}
+
+	return -1;
+}
+
+void register_interrupt_callback_initalizer(int (*func)(int (*)(int, void *, void *), void *arg))
+{
+	register_interrupt_callback_func = func;
+}
 
 namespace device
 {
@@ -85,7 +102,8 @@ SPI::init()
 {
 	// Open the actual SPI device
 	char dev_path[16];
-	snprintf(dev_path, sizeof(dev_path), "/dev/spidev%i.%i", get_device_bus(), PX4_SPI_DEV_ID(_device));
+	//snprintf(dev_path, sizeof(dev_path), "/dev/spidev%i.%i", get_device_bus(), PX4_SPI_DEV_ID(_device));
+	snprintf(dev_path, sizeof(dev_path), "/xspi/%i", get_device_bus());
 	DEVICE_DEBUG("%s", dev_path);
 	_fd = ::open(dev_path, O_RDWR);
 

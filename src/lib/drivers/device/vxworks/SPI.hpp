@@ -43,7 +43,7 @@
 #include "../CDev.hpp"
 #include <px4_platform_common/spi.h>
 
-#if true //defined(CONFIG_SPI)
+#if defined(CONFIG_SPI)
 
 enum spi_mode_e {
 	SPIDEV_MODE0 = 1, /* CPOL=0 CHPHA=0 */
@@ -53,6 +53,9 @@ enum spi_mode_e {
 };
 
 struct I2CSPIDriverConfig;
+
+int px4_arch_gpiosetevent(spi_drdy_gpio_t pin, bool r, bool f, bool e, int (*func)(int, void *, void *), void *arg);
+void register_interrupt_callback_initalizer(int (*)(int (*)(int, void *, void *), void *arg));
 
 namespace device __EXPORT
 {

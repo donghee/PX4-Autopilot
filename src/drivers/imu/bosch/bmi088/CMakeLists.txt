@@ -40,11 +40,8 @@ px4_add_module(
 		Bosch_BMI088_Gyroscope_Registers.hpp
 
 		BMI088.cpp
-		BMI088.hpp
 		BMI088_Accelerometer.cpp
-		BMI088_Accelerometer.hpp
 		BMI088_Gyroscope.cpp
-		BMI088_Gyroscope.hpp
 
 		bmi088_main.cpp
 	DEPENDS
