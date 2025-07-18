@@ -1,0 +1,5 @@
+target connect vxworks7:TCP:192.168.5.61:1534 -kernel ~/src/vxbuild/workspace/vip_zynq7k_vxprj/default/vxWorks -logdir /tmp
+set args start
+file "px4"
+break main
+run
