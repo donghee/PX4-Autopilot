@@ -13,6 +13,7 @@ def main():
     authorizer.add_user('zynq7k', '1234', BIN_PATH, perm='elradfmw')
     handler = FTPHandler
     handler.authorizer = authorizer
+    handler.permit_foreign_addresses = True
 
     # 서버 설정
     server_address = ('', 21)  # 21번 포트 사용
