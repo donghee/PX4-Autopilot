@@ -174,17 +174,7 @@ int zynq7k_main(int argc, char * argv[]) {
 	process_commands(apps, "param set-default SYS_FAILURE_EN 1\n");
 	process_commands(apps, "param set-default COM_LOW_BAT_ACT 2\n");
 
-	// simulator
-	process_commands(apps, "param set SYS_HITL 2\n"); //1: HITL, 2: SIH, 0: Disabled Default
-	process_commands(apps, "param set SENS_EN_GPSSIM 1\n");
-	process_commands(apps, "param set SENS_EN_BAROSIM 1\n");
-	process_commands(apps, "param set SENS_EN_MAGSIM 1\n");
-
-	process_commands(apps, "param set PWM_MAIN_FUNC1 101\n");
-	process_commands(apps, "param set PWM_MAIN_FUNC2 102\n");
-	process_commands(apps, "param set PWM_MAIN_FUNC3 103\n");
-	process_commands(apps, "param set PWM_MAIN_FUNC4 104\n");
-	process_commands(apps, "param set SIH_VEHICLE_TYPE 0\n");
+	//simulator
 
 	process_commands(apps, "param set IMU_INTEG_RATE 200\n"); // For jmavsim simulator
 	process_commands(apps, "param set-default IMU_INTEG_RATE 200\n"); // For jmavsim simulator
@@ -201,10 +191,10 @@ int zynq7k_main(int argc, char * argv[]) {
 
 	// process_commands(apps, "dataman start -f dataman\n"); // File
 	process_commands(apps, "dataman start -r\n"); // RAM
-	process_commands(apps, "load_mon start\n");
+	//process_commands(apps, "load_mon start\n");
 
 	// sensors
-	// process_commands(apps, "fake_imu start\n");
+	 process_commands(apps, "fake_imu start\n");
 	// process_commands(apps, "fake_gps start\n");
 	// process_commands(apps, "fake_magnetometer start\n");
 	process_commands(apps, "rm3100 start -X 1\n");
@@ -215,7 +205,7 @@ int zynq7k_main(int argc, char * argv[]) {
 	//process_commands(apps, "sensor_gps_sim start\n");
 	//process_commands(apps, "sensor_mag_sim start\n");
 	//process_commands(apps, "sensor_airspeed_sim start\n");
-	//process_commands(apps, "pwm_out_sim start\n");
+	process_commands(apps, "pwm_out_sim start -m hil\n");
 	//process_commands(apps, "simulator_sih start\n");
 	//process_commands(apps, "simulator_mavlink start\n");
 
@@ -227,14 +217,13 @@ int zynq7k_main(int argc, char * argv[]) {
 	process_commands(apps, "mavlink start -x -u 14560 -r 4000000 -f\n");
 
 	// controller
-	process_commands(apps, "manual_control start");
-	process_commands(apps, "control_allocator start");
-	process_commands(apps, "mc_rate_control start");
-	process_commands(apps, "mc_att_control start");
-	process_commands(apps, "mc_hover_thrust_estimator start");
-	process_commands(apps, "flight_mode_manager start");
-	process_commands(apps, "mc_pos_control start");
-	process_commands(apps, "land_detector start multicopter");
+	process_commands(apps, "manual_control start\n");
+	process_commands(apps, "control_allocator start\n");
+	process_commands(apps, "mc_att_control start\n");
+	process_commands(apps, "mc_hover_thrust_estimator start\n");
+	process_commands(apps, "flight_mode_manager start\n");
+	process_commands(apps, "mc_pos_control start\n");
+	process_commands(apps, "land_detector start\n");
 
 	process_commands(apps, "sensors start\n");
 	//process_commands(apps, "commander start\n");

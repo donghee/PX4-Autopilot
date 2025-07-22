@@ -240,7 +240,12 @@ const char *SerialImpl::getPort() const
 bool SerialImpl::validatePort(const char *port)
 {
 	// TODO: DONGHEE implement validatePort function in vxworks
-	return (port && (access(port, R_OK | W_OK) == 0));
+	bool ret = false;
+
+	if (port != nullptr) {
+		ret = (bool)(access(port, F_OK/*R_OK | W_OK*/) == 0);
+	}
+	return ret;
 	//return true;
 }
 
@@ -276,7 +281,7 @@ bool SerialImpl::setBaudrate(uint32_t baudrate)
 
 	// process baud rate change now if port is already open
 	if (_open) {
-		return configure();
+		::ioctl(_serial_fd, FIOBAUDRATE, _baudrate);
 	}
 
 	return true;
