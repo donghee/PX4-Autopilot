@@ -57,8 +57,6 @@ extern pthread_t _shell_task_id;
 __BEGIN_DECLS
 
 long PX4_TICKS_PER_SEC = 1000L;
-//void fsync(int fd) { return; } TODO: DONGHEE  use vxworks library
-uint32_t crc32part(const uint8_t *src, size_t len, uint32_t crc32val) { return 1; }
 
 __END_DECLS
 
@@ -89,6 +87,7 @@ void init(int argc, char *argv[], const char *app_name)
 	printf("\n");
 	printf("%s starting.\n", app_name);
 	printf("\n");
+	printf("PX4_TICKS_PER_SEC=%d\n", PX4_TICKS_PER_SEC);
 
 	// set the threads name
 #ifdef __PX4_DARWIN

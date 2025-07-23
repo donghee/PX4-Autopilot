@@ -41,7 +41,7 @@ set(VXWORKS_LAYER_SRCS
 	tasks.cpp
 	px4_sem.cpp
 	px4_init.cpp
-	# lib_crc32.c
+	lib_crc32.c
 	drv_hrt.cpp
 	cpuload.cpp
 	print_load.cpp
