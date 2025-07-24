@@ -56,6 +56,10 @@
 // Define this as empty since there are no I2C buses
 #define BOARD_I2C_BUS_CLOCK_INIT
 
+/* PWM
+ */
+#define DIRECT_PWM_OUTPUT_CHANNELS   9
+
 #include <system_config.h>
 #include <px4_platform_common/board_common.h>
 
@@ -72,8 +76,8 @@
 extern "C" {
 #endif
 
-// int  rc_init(void);
-// void rc_cleaning(void);
+ int  rc_init(void);
+ void rc_cleaning(void);
 
 #ifdef __cplusplus
 }

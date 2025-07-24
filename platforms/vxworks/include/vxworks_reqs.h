@@ -342,5 +342,11 @@ struct i2c_rdwr_ioctl_data {
 #define OPT_TERMINAL    (OPT_ECHO | OPT_CRMOD | OPT_TANDEM | \
                          OPT_MON_TRAP | OPT_7_BIT | OPT_ABORT | OPT_LINE)
 
-#define CONTIG_MAX      0xFFFFFFFFUL      /* "count" for FIOCONTIG if requesting
-                                             maximum contiguous space on dev */
+#define CONTIG_MAX      0xFFFFFFFFUL      /* "count" for FIOCONTIG if requesting maximum contiguous space on dev */
+
+/* AXI_TIMER (PWM) */
+#define	PWM_PULSE_FREQ_SET		_IOW(VX_IOCG_ZYNQ_DEV, 6, long)
+#define	PWM_PULSE_DUTY_SET		_IOW(VX_IOCG_ZYNQ_DEV, 7, long)
+#define	PWM_PULSE_DUTYTIME_SET	_IOW(VX_IOCG_ZYNQ_DEV, 8, long)
+#define	PWM_PULSE_START			_IOW(VX_IOCG_ZYNQ_DEV, 9, int)
+#define	PWM_PULSE_STOP			_IOW(VX_IOCG_ZYNQ_DEV, 10, int)

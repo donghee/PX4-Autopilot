@@ -41,6 +41,8 @@
 #include <string.h>
 #include <errno.h>
 #include "hrt_work.h"
+#include "tickLib.h"
+#include "sysLib.h"
 
 static constexpr unsigned HRT_INTERVAL_MIN = 50;
 static constexpr unsigned HRT_INTERVAL_MAX = 50000000;
@@ -94,16 +96,23 @@ int px4_clock_gettime(clockid_t clk_id, struct timespec *tp)
 
 hrt_abstime hrt_absolute_time()
 {
+#if false
+	hrt_abstime now = (tickGet() * 1000) / __sysClkRateGet();
+	printf ("[hrt_abstime] now: %u", now);
+	return now + dsp_offset;
+#else
 	struct timespec ts;
+
 	px4_clock_gettime(CLOCK_MONOTONIC, &ts);
 	return ts_to_abstime(&ts);
+#endif
 }
 
-// int hrt_set_absolute_time_offset(int32_t time_diff_us)
-// {
-	// dsp_offset = time_diff_us;
-	// return 0;
-// }
+//int hrt_set_absolute_time_offset(int32_t time_diff_us)
+//{
+//	 dsp_offset = time_diff_us;
+//	 return 0;
+//}
 
 void hrt_store_absolute_time(volatile hrt_abstime *t)
 {
