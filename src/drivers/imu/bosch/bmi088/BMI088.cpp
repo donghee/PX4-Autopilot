@@ -35,8 +35,11 @@
 
 #include "BMI088_Accelerometer.hpp"
 #include "BMI088_Gyroscope.hpp"
+
+#if defined (__PX4_VXWORKS)
 namespace Bosch1
 {
+#endif
 I2CSPIDriverBase *BMI088::instantiate(const I2CSPIDriverConfig &config, int runtime_instance)
 {
 	BMI088 *instance = nullptr;
@@ -87,4 +90,6 @@ bool BMI088::Reset()
 	ScheduleNow();
 	return true;
 }
+#if defined (__PX4_VXWORKS)
 }
+#endif

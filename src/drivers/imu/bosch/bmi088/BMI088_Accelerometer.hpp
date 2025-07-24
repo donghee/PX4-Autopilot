@@ -41,7 +41,11 @@
 
 namespace Bosch::BMI088::Accelerometer
 {
+#if defined (__PX4_VXWORKS)
 class BMI088_Accelerometer : public Bosch1::BMI088
+#else
+class BMI088_Accelerometer : public BMI088
+#endif
 {
 public:
 	BMI088_Accelerometer(const I2CSPIDriverConfig &config);

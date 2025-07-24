@@ -39,8 +39,11 @@
 #include <px4_platform_common/i2c_spi_buses.h>
 
 static constexpr int16_t combine(uint8_t msb, uint8_t lsb) { return (msb << 8u) | lsb; }
+
+#if defined (__PX4_VXWORKS)
 namespace Bosch1
 {
+#endif
 class BMI088 : public device::SPI, public I2CSPIDriver<BMI088>
 {
 public:
@@ -81,5 +84,6 @@ protected:
 	uint16_t _fifo_empty_interval_us{2500}; // 2500 us / 400 Hz transfer interval
 
 };
+#if defined (__PX4_VXWORKS)
 }
-
+#endif

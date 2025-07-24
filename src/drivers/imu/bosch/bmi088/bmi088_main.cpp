@@ -36,7 +36,11 @@
 
 #include "BMI088.hpp"
 
-void Bosch1::BMI088::print_usage()
+#if defined (__PX4_VXWORKS)
+using namespace Bosch1;
+#endif
+
+void BMI088::print_usage()
 {
 	PRINT_MODULE_USAGE_NAME("bmi088", "driver");
 	PRINT_MODULE_USAGE_SUBCATEGORY("imu");

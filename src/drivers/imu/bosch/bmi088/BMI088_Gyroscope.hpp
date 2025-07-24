@@ -41,7 +41,11 @@
 
 namespace Bosch::BMI088::Gyroscope
 {
+#if defined (__PX4_VXWORKS)
 class BMI088_Gyroscope : public Bosch1::BMI088
+#else
+class BMI088_Gyroscope : public BMI088
+#endif
 {
 public:
 	BMI088_Gyroscope(const I2CSPIDriverConfig &config);
