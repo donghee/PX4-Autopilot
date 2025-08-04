@@ -38,7 +38,7 @@
 static inline constexpr px4_spi_bus_device_t initSPIDevice(uint8_t devid_driver, uint8_t cs_index)
 {
 	px4_spi_bus_device_t ret{};
-	ret.cs_gpio = 1; // set to some non-zero value to indicate this is used
+	ret.cs_gpio = cs_index; // set to some non-zero value to indicate this is used
 	ret.devid = PX4_SPIDEV_ID(PX4_SPI_DEVICE_ID, cs_index);
 	ret.devtype_driver = devid_driver;
 	return ret;
@@ -53,7 +53,7 @@ static inline constexpr px4_spi_bus_t initSPIBus(int bus, const px4_spi_bus_devi
 	}
 
 	ret.bus = bus;
-	ret.is_external = false; // all buses are marked internal on QuRT
+	ret.is_external = false;
 	ret.requires_locking = false;
 	return ret;
 }

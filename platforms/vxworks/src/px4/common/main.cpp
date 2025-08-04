@@ -194,7 +194,7 @@ int zynq7k_main(int argc, char * argv[]) {
 	//process_commands(apps, "load_mon start\n");
 
 	// sensors
-	 process_commands(apps, "fake_imu start\n");
+	// process_commands(apps, "fake_imu start\n");
 	// process_commands(apps, "fake_gps start\n");
 	// process_commands(apps, "fake_magnetometer start\n");
 	process_commands(apps, "rm3100 start -X 1\n");

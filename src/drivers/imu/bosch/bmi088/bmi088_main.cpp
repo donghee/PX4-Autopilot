@@ -55,7 +55,7 @@ void BMI088::print_usage()
 extern "C" int bmi088_main(int argc, char *argv[])
 {
 	int ch;
-	using ThisDriver = Bosch1::BMI088;
+	using ThisDriver = BMI088;
 	BusCLIArguments cli{false, true};
 	uint16_t type = 0;
 	cli.default_spi_frequency = 10000000;

@@ -149,16 +149,16 @@ SPI::transfer(uint8_t *send, uint8_t *recv, unsigned len)
 		return PX4_ERROR;
 	}
 
-#if false
+#if true
 	SPI_IOC_MSG spi_transfer{};
 
-	spi_transfer.txBuf = (uint64_t)send;
-	spi_transfer.rxBuf = (uint64_t)recv;
+	spi_transfer.txBuf = (uint32_t)send;
+	spi_transfer.rxBuf = (uint32_t)recv;
 	spi_transfer.txLen = len;
 	spi_transfer.rxLen = len;
-	spi_transfer.delayUsecs = _frequency;
+//	spi_transfer.delayUsecs = _frequency;
 	spi_transfer.txBuswidth = 8;
-	spi_transfer.trxBuswidth = 8;
+	spi_transfer.rxBuswidth = 8;
 
 #else
 	spi_ioc_transfer spi_transfer{};
@@ -169,7 +169,7 @@ SPI::transfer(uint8_t *send, uint8_t *recv, unsigned len)
 	spi_transfer.speed_hz = _frequency;
 	spi_transfer.bits_per_word = 8;
 #endif
-
+Dldndl++
 	result = ::ioctl(_fd, SPI_IOC_MESSAGE(1), &spi_transfer);
 
 	if (result != (int)len) {

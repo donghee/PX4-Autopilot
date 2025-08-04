@@ -136,7 +136,7 @@
 #define	_IOWU(g,n,t)	(IOC_USER|_IOW(g,n,t))
 #define	_IOWRU(g,n,t)	(IOC_USER|_IOWR(g,n,t))
 
-#if true
+#if false
 struct spi_ioc_transfer {
 	uint64_t	tx_buf;
 	uint64_t	rx_buf;
@@ -169,8 +169,8 @@ struct spi_ioc_transfer {
 
 typedef struct    /* describes a single SPI ioctl transfer message type */
     {
-    uint64_t txBuf;
-    uint64_t rxBuf;
+    uint32_t txBuf;
+    uint32_t rxBuf;
 
     size_t    txLen;
     size_t    rxLen;
