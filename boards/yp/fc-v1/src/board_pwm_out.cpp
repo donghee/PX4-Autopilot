@@ -31,7 +31,7 @@
  *
  ****************************************************************************/
 #ifndef MODULE_NAME
-#define MODULE_NAME "navio_sysfs_pwm_out"
+#define MODULE_NAME "fcs_pwm_out"
 #endif
 
 #include "board_pwm_out.h"

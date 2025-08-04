@@ -49,6 +49,7 @@
 #include <px4_platform_common/i2c_spi_buses.h>
 
 #if true
+
 static int (*register_interrupt_callback_func)(int (*)(int, void *, void *), void *arg) = NULL;
 
 int px4_arch_gpiosetevent(spi_drdy_gpio_t pin, bool r, bool f, bool e, int (*func)(int, void *, void *), void *arg)
@@ -102,8 +103,7 @@ SPI::init()
 {
 	// Open the actual SPI device
 	char dev_path[16];
-	//snprintf(dev_path, sizeof(dev_path), "/dev/spidev%i.%i", get_device_bus(), PX4_SPI_DEV_ID(_device));
-	snprintf(dev_path, sizeof(dev_path), "/xspi/%i", get_device_bus());
+	snprintf(dev_path, sizeof(dev_path), "/dev/spidev%i.%i", get_device_bus(), PX4_SPI_DEV_ID(_device));
 	DEVICE_DEBUG("%s", dev_path);
 	_fd = ::open(dev_path, O_RDWR);
 
@@ -152,11 +152,11 @@ SPI::transfer(uint8_t *send, uint8_t *recv, unsigned len)
 #if true
 	SPI_IOC_MSG spi_transfer{};
 
-	spi_transfer.txBuf = (uint32_t)send;
-	spi_transfer.rxBuf = (uint32_t)recv;
+	spi_transfer.txBuf = (uint64_t)send;
+	spi_transfer.rxBuf = (uint64_t)recv;
 	spi_transfer.txLen = len;
 	spi_transfer.rxLen = len;
-//	spi_transfer.delayUsecs = _frequency;
+	spi_transfer.delayUsecs = _frequency;
 	spi_transfer.txBuswidth = 8;
 	spi_transfer.rxBuswidth = 8;
 
@@ -169,7 +169,7 @@ SPI::transfer(uint8_t *send, uint8_t *recv, unsigned len)
 	spi_transfer.speed_hz = _frequency;
 	spi_transfer.bits_per_word = 8;
 #endif
-Dldndl++
+
 	result = ::ioctl(_fd, SPI_IOC_MESSAGE(1), &spi_transfer);
 
 	if (result != (int)len) {
