@@ -53,7 +53,8 @@ static inline constexpr px4_spi_bus_t initSPIBus(int bus, const px4_spi_bus_devi
 	}
 
 	ret.bus = bus;
-	ret.is_external = false;
+	ret.is_external = true;
 	ret.requires_locking = false;
+
 	return ret;
 }

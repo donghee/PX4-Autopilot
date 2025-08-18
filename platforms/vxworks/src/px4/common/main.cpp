@@ -199,6 +199,9 @@ int zynq7k_main(int argc, char * argv[]) {
 	// process_commands(apps, "fake_magnetometer start\n");
 	process_commands(apps, "rm3100 start -X 1\n");
 	process_commands(apps, "ms5611 start -X 0\n");
+	//process_commands(apps, "septentrio start -d /ttyS4 -b 115200\n");
+	//process_commands(apps, "gps start -d /ttyS4 -b 115200 -p sbf\n");
+
 
 	// simulator
 	//process_commands(apps, "sensor_baro_sim start\n");

@@ -183,6 +183,13 @@ typedef struct    /* describes a single SPI ioctl transfer message type */
     uint16_t  res2;
     } SPI_IOC_MSG;
 
+
+typedef	struct {
+	unsigned int cs;	/* 0 or 1 */
+	unsigned int offset;
+	char * 		 buffer;
+} XSPI_MSG;
+
 /* N * msgsize must less than the ioctl */
 
 #define SPI_MSGSIZE(N) \

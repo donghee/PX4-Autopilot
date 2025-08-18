@@ -379,8 +379,6 @@ int SeptentrioDriver::task_spawn(int argc, char *argv[], Instance instance)
 		entry_point = &run_trampoline_secondary;
 	}
 
-	printf ("\n SeptentrioDriver::task_spawn %d / %d / %d / %p \n", SCHED_DEFAULT, SCHED_PRIORITY_SLOW_DRIVER, k_task_stack_size, entry_point);
-	px4_sleep(1);
 
 	px4_task_t task_id = px4_task_spawn_cmd("septentrio",
 						SCHED_DEFAULT,
@@ -749,6 +747,7 @@ int SeptentrioDriver::detect_serial_port(char* const port_name) {
 	hrt_abstime timeout_time = hrt_absolute_time() + 5 * 1000 * k_receiver_ack_timeout_fast;
 	bool response_detected = false;
 
+	SEP_INFO("detect_serial_port: %s", port_name);
 	// Receiver prints prompt after a message.
 	if (!send_message(k_command_ping)) {
 		return PX4_ERROR;
@@ -815,6 +814,7 @@ SeptentrioDriver::ConfigureResult SeptentrioDriver::configure()
 	ConfigureResult result {ConfigureResult::Ok};
 
 	// Passively detect receiver port.
+	SEP_INFO("CONFIG: detect_serial_port Start");
 	if (detect_serial_port(com_port) != PX4_OK) {
 		SEP_WARN("CONFIG: failed port detection");
 		return ConfigureResult::FailedCompletely;
@@ -826,6 +826,7 @@ SeptentrioDriver::ConfigureResult SeptentrioDriver::configure()
 		return ConfigureResult::Ok;
 	}
 
+	SEP_INFO("CONFIG: detect_serial_port Step1");
 	// If user requested specific baud rate, set it now. Otherwise keep detected baud rate.
 	if (strstr(com_port, "COM") != nullptr && _chosen_baud_rate != 0) {
 		snprintf(msg, sizeof(msg), k_command_set_baud_rate, com_port, _chosen_baud_rate);
@@ -850,6 +851,7 @@ SeptentrioDriver::ConfigureResult SeptentrioDriver::configure()
 		}
 	}
 
+	SEP_INFO("CONFIG: detect_serial_port Step2");
 	// Delete all sbf outputs on current COM port to remove clutter data
 	snprintf(msg, sizeof(msg), k_command_clear_sbf, _receiver_stream_main, com_port);
 
@@ -858,6 +860,7 @@ SeptentrioDriver::ConfigureResult SeptentrioDriver::configure()
 		return ConfigureResult::FailedCompletely; // connection and/or baudrate detection failed
 	}
 
+	SEP_INFO("CONFIG: detect_serial_port Step3");
 	// Set up the satellites used in PVT computation.
 	if (_receiver_constellation_usage != static_cast<int32_t>(SatelliteUsage::Default)) {
 		char requested_satellites[40] {};
@@ -886,6 +889,7 @@ SeptentrioDriver::ConfigureResult SeptentrioDriver::configure()
 		}
 	}
 
+	SEP_INFO("CONFIG: detect_serial_port Step4");
 	// Internal logging on the receiver.
 	if (_receiver_logging_frequency != ReceiverLogFrequency::Disabled && _receiver_stream_log != _receiver_stream_main) {
 		const char *frequency {nullptr};
@@ -1330,7 +1334,7 @@ bool SeptentrioDriver::send_message_and_wait_for_ack(const char *msg, const int 
 	hrt_abstime timeout_time = hrt_absolute_time() + 1000 * timeout;
 
 	do {
-		int read_result = read(reinterpret_cast<uint8_t*>(buf), sizeof(buf), 50);
+		int read_result = read(reinterpret_cast<uint8_t*>(buf), sizeof(buf), 60);
 
 		if (read_result < 0) {
 			SEP_WARN("SBF read error");
@@ -1350,6 +1354,7 @@ bool SeptentrioDriver::send_message_and_wait_for_ack(const char *msg, const int 
 				response_check_character = 0;
 			}
 		}
+		//SEP_INFO("response_check_character: %d, timeout: %llu, hrt_time: %llu", response_check_character, timeout_time, hrt_absolute_time());
 	} while (timeout_time > hrt_absolute_time());
 
 	SEP_WARN("Response: timeout");
@@ -1412,6 +1417,7 @@ int SeptentrioDriver::poll_or_read(uint8_t *buf, size_t buf_length, int timeout)
 	int read_timeout = math::min(k_max_receiver_read_timeout, timeout);
 
 	return _uart.readAtLeast(buf, buf_length, math::min(k_min_receiver_read_bytes, buf_length), read_timeout);
+	//return _uart.read(buf, buf_length);
 }
 
 int SeptentrioDriver::write(const uint8_t* buf, size_t buf_length)

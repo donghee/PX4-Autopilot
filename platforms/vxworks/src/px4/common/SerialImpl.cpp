@@ -103,14 +103,13 @@ bool SerialImpl::open()
 	}
 
 	_serial_fd = serial_fd;
+	_open = true;
 
 	// Configure the serial port
 	if (! configure()) {
 		PX4_ERR("failed to configure %s ", _port);
 		return false;
 	}
-
-	_open = true;
 
 	if (_single_wire_mode) {
 		setSingleWireMode();
@@ -272,6 +271,7 @@ uint32_t SerialImpl::getBaudrate() const
 
 bool SerialImpl::setBaudrate(uint32_t baudrate)
 {
+	int ret = -1;
 	// check if already configured
 	if ((baudrate == _baudrate) && _open) {
 		return true;
@@ -280,8 +280,13 @@ bool SerialImpl::setBaudrate(uint32_t baudrate)
 	_baudrate = baudrate;
 
 	// process baud rate change now if port is already open
+	// PX4_INFO("setBaudrate: %d \n", _baudrate);
 	if (_open) {
-		::ioctl(_serial_fd, FIOBAUDRATE, _baudrate);
+		ret = ::ioctl(_serial_fd, FIOBAUDRATE, _baudrate);
+		if (ret <  0) {
+			PX4_WARN("fail setBaudrate: %d \n", _baudrate);
+			return false;
+		}
 	}
 
 	return true;
