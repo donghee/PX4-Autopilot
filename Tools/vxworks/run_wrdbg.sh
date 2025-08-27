@@ -1,4 +1,4 @@
-# Go to the PX4 root directory
+# Go to the PX4-Autopilot root directory
 cd "$(dirname "$0")/../.."
 
 # Set up the debug init file

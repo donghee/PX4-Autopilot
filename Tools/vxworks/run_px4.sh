@@ -10,15 +10,17 @@ spawn telnet $host
 expect "Connected to"
 expect -re $prompt
 
-# set clock rate to 1000 Hz
-send "sysClkRateSet 1000\r"
+# set clock rate to 300 Hz
+# send "sysClkRateSet 300\r"
+# set clock rate to 2000 Hz
+send "sysClkRateSet 2000\r"
 expect -re $prompt
 
 # cmd shell
 send "cmd\r"
 expect -re $prompt
 
-# cd host: 
+# cd host:
 send "cd \"host:\"\r"
 expect -re $prompt
 

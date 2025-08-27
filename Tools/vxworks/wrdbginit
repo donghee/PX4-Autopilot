@@ -1,5 +1,10 @@
-target connect vxworks7:TCP:192.168.5.61:1534 -kernel ~/src/vxbuild/workspace/vip_zynq7k_vxprj/default/vxWorks -logdir /tmp
+#target connect vxworks7:TCP:192.168.5.61:1534 -kernel ~/src/vxbuild/workspace/vip_zynq7k_vxprj/default/vxWorks -logdir /tmp
+target connect vxworks7:TCP:192.168.5.61:1534 -kernel ~/src/vxbuild/workspace/fcs_vxworks_bsp/bsp_src/vip_zynq_fcs_vxprj/default/vxWorks -logdir /tmp
 set args start
 file "px4"
-break main
-run
+#break zynq7k_main
+#break platforms/vxworks/src/px4/common/SerialImpl.cpp:211
+#break boards/yp/fc-v1/src/board_pwm_out.cpp:75
+break boards/yp/fc-v1/src/board_pwm_out.cpp:87
+#run
+#rtp kill or kill

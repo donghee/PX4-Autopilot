@@ -1,9 +1,14 @@
 #!/bin/sh
 
-export WIND_CC_SYSROOT=$HOME/workspace/vsb_zynq7k_vxprj
+export WIND_CC_SYSROOT=$HOME/workspace/fcs_vxworks_bsp/bsp_src/vsb_zynq7k_vxprj
+
+cd "$(dirname "$0")/../.."
 
 if [ "$1" = "clean" ]; then
-    cd $HOME/workspace/PX4-Autopilot_vxworks && make clean
+    make clean
+
+elif [ "$1" = "distclean" ]; then
+    make distclean
 fi
 
-cd $HOME/workspace/PX4-Autopilot_vxworks && make yp_fc-v1_default
+make yp_fc-v1_default

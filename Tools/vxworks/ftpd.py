@@ -10,7 +10,7 @@ def main():
     CURRENT_PATH = os.path.dirname(os.path.abspath(__file__))
     BIN_PATH = os.path.join(CURRENT_PATH, '../../build/yp_fc-v1_default/bin')
     print(f"FTP Server Root: {BIN_PATH}")
-    authorizer.add_user('zynq7k', '1234', BIN_PATH, perm='elradfmw')
+    authorizer.add_user('fcs', '1234', BIN_PATH, perm='elradfmw')
     handler = FTPHandler
     handler.authorizer = authorizer
     handler.permit_foreign_addresses = True
