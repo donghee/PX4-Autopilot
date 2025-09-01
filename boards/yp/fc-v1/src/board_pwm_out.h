@@ -56,7 +56,7 @@ public:
 
 private:
 	static const int MAX_NUM_PWM = 12;
-	static const int FREQUENCY_PWM = 400;
+	static const int FREQUENCY_PWM = 500;
 
 	int _pwm_fd[MAX_NUM_PWM];
 	int _pwm_num;

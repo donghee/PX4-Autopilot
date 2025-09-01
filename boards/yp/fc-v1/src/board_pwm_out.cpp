@@ -57,6 +57,7 @@ const char  DevfsPWMOut::_device[] = "/pwm";
 	}
 
 	_pwm_num = max_num_outputs;
+	_pwm_num = 4;
 }
 
  DevfsPWMOut::~ DevfsPWMOut()
@@ -73,17 +74,23 @@ int  DevfsPWMOut::init()
 	int i;
 	char path[128];
 
+	int freq_pwm = 500;
+	int pulse_start = 1;
+	int dutytime = 1000;
+
 	for (i = 0; i < _pwm_num; ++i) {
-		::sprintf(path, "%s/%d", _device, (i + 1));
-		_pwm_fd[i] = ::open(path, O_WRONLY | O_CLOEXEC);
+		::sprintf(path, "%s/%d", _device, i);
+		_pwm_fd[i] = ::open(path, O_RDWR);
 
 		if (_pwm_fd[i] == -1) {
+			PX4_INFO("PWM: Failed to open %s", path);
 			PX4_ERR("PWM: Failed to open duty_cycle.");
 			return -errno;
 		}
 		else {
-			::ioctl(_pwm_fd[i], PWM_PULSE_FREQ_SET, FREQUENCY_PWM);
-			::ioctl(_pwm_fd[i], PWM_PULSE_START, 0);
+			::ioctl(_pwm_fd[i], PWM_PULSE_FREQ_SET, (void*)&freq_pwm);
+			::ioctl(_pwm_fd[i], PWM_PULSE_DUTYTIME_SET, (void*)&dutytime);
+			::ioctl(_pwm_fd[i], PWM_PULSE_START, (void*)&pulse_start);
 		}
 	}
 
@@ -97,9 +104,9 @@ int  DevfsPWMOut::send_output_pwm(const uint16_t *pwm, int num_outputs)
 	if (num_outputs > _pwm_num) {
 		num_outputs = _pwm_num;
 	}
-
+	PX4_INFO("PWM: send_output pwm");
 	for (int i = 0; i < num_outputs; ++i) {
-		int write_ret = ::ioctl(_pwm_fd[i], PWM_PULSE_DUTYTIME_SET, pwm[i]);
+		int write_ret = ::ioctl(_pwm_fd[i], PWM_PULSE_DUTYTIME_SET, (void*)&pwm[i]);
 		if (write_ret == -1) {
 			ret = -1;
 		}
@@ -130,4 +137,3 @@ int  DevfsPWMOut::pwm_write_sysfs(char *path, int value)
 	return 0;
 }
 #endif
-
