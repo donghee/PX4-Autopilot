@@ -1,0 +1,6 @@
+menuconfig DRIVERS_VXWORKS_PWM_OUT
+	bool "vxworks_pwm_out"
+	default n
+	depends on PLATFORM_VXWORKS
+	---help---
+		Enable support for vxworks_pwm_out
