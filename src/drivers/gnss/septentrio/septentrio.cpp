@@ -733,7 +733,7 @@ bool SeptentrioDriver::detect_receiver_baud_rate(const uint32_t &baud_rate, bool
 	(void)send_message("\n");
 
 	if (send_message_and_wait_for_ack(k_command_ping, k_receiver_ack_timeout_fast)) {
-		SEP_INFO("Detected baud rate: %lu", baud_rate);
+		SEP_INFO("Detected baud rate: %u", baud_rate);
 		return true;
 	}
 
@@ -1483,7 +1483,7 @@ void SeptentrioDriver::reset_if_scheduled()
 int SeptentrioDriver::set_baudrate(uint32_t baud)
 {
 	if (_uart.setBaudrate(baud)) {
-		SEP_INFO("baud controller: %lu", baud);
+		SEP_INFO("baud controller: %u", baud);
 		return PX4_OK;
 	} else {
 		return PX4_ERROR;
