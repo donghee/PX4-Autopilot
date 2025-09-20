@@ -6,7 +6,8 @@ import argparse
 from pathlib import Path
 
 try:
-    from Crypto.Cipher import ChaCha20
+    from Crypto.Cipher import ChaCha20, AES
+    from Crypto.Util.Padding import unpad
     from Crypto.PublicKey import RSA
     from Crypto.Cipher import PKCS1_OAEP
     from Crypto.Hash import SHA256
@@ -63,6 +64,7 @@ def decrypt_log_file(ulog_file, private_key, output_folder):
 
         # Try to decrypt the ChaCha key
         cipher_rsa = PKCS1_OAEP.new(key, SHA256)
+        print(key)
         try:
             ulog_key = cipher_rsa.decrypt(cipher)
         except ValueError:
@@ -70,7 +72,8 @@ def decrypt_log_file(ulog_file, private_key, output_folder):
             return
 
         # Read and decrypt the log data
-        cipher = ChaCha20.new(key=ulog_key, nonce=nonce)
+        #cipher = ChaCha20.new(key=ulog_key, nonce=nonce)
+        cipher = AES.new(key=ulog_key, mode=AES.MODE_ECB)
 
         # Save decrypted log with .ulg extension
         output_path = os.path.join(output_folder, Path(ulog_file).stem + ".ulg")
@@ -78,7 +81,10 @@ def decrypt_log_file(ulog_file, private_key, output_folder):
             if data_offset > 0:
                 f.seek(data_offset)
             with open(output_path, 'wb') as out:
-                out.write(cipher.decrypt(f.read()))
+                #  out.write(cipher.decrypt(f.read()))
+                for chunk in iter(lambda: f.read(16), b""):
+                    #  print([hex(x) for x in chunk])
+                    out.write(cipher.decrypt(chunk))
 
         print(f"{output_path}")
 
