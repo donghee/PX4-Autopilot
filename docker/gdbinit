@@ -1,0 +1,18 @@
+set pagination off
+set print pretty
+set history save
+set mem inaccessible-by-default off
+set confirm off
+set filename-display absolute
+set disassemble-next-line on
+maintenance set internal-error backtrace on
+maintenance set internal-warning backtrace on
+set substitute-path /__w/PX4_firmware_private/PX4_firmware_private/ .
+#source /home/donghee/.local/lib/python3.13/site-packages/emdbg/debug/data/orbuculum.gdb
+#source /home/donghee/.local/lib/python3.13/site-packages/emdbg/debug/data/cortex_m.gdb
+file ../build/px4_fmu-v6x_encrypted_logs/px4_fmu-v6x_encrypted_logs.elf
+target extended-remote localhost:3333 
+load
+monitor reset
+break src/drivers/sw_crypto/crypto.c:1428
+c

@@ -41,10 +41,12 @@
 #include <inttypes.h>
 #include <stdbool.h>
 
+#include <px4_platform_common/log.h>
 #include <px4_platform_common/crypto_backend.h>
 #include <px4_random.h>
 #include <lib/crypto/monocypher/src/optional/monocypher-ed25519.h>
 #include <tomcrypt.h>
+#include "crypto_aes.h"
 
 extern void libtomcrypt_init(void);
 
@@ -73,6 +75,10 @@ static int crypto_open_count = 0;
  * is initialized & pulled in by linker only when it is actually used
  */
 static bool tomcrypt_initialized = false;
+
+/* AES context */
+static bool crypto_aes_initialized = false;
+crypto_aes_key aes_key;
 
 typedef struct {
 	size_t key_size;
@@ -284,6 +290,49 @@ bool crypto_encrypt_data(crypto_session_handle_t handle,
 		}
 		break;
 
+	case CRYPTO_AES: {
+			size_t key_sz;
+			int err;
+			uint8_t *key = (uint8_t *)crypto_get_key_ptr(handle.keystore_handle, key_idx, &key_sz);
+	
+			if (!crypto_aes_initialized) {
+				if (( err = crypto_aes_setup((const unsigned char*)key, (int)key_sz, 0, &aes_key)) != CRYPT_OK) {
+					PX4_INFO("Crypto AES setup ERROR");
+					return false;
+				}
+				err = 0;
+				crypto_aes_initialized = true;
+			}
+	
+			// Check 256-bit AES key
+			if (key_sz == 32 && *cipher_size >= message_size) {
+				for (size_t i = 0; i < message_size; i += AES_BLOCK_SIZE) {
+					if (i + AES_BLOCK_SIZE <= message_size) {
+						/* Full block */
+						if (( err = crypto_aes_encrypt(message + i, cipher + i, &aes_key) != CRYPT_OK)) {
+							PX4_INFO("Crypto AES encrypt ERROR");
+							return false;
+						}
+
+					} else {
+						/* Partial block, pad with zeros */
+						uint8_t block[AES_BLOCK_SIZE];
+						size_t rem = message_size - i;
+						memset(block, 0, sizeof(block));
+						memcpy(block, message + i, rem);
+						if (( err = crypto_aes_encrypt(block, cipher + i, &aes_key) != CRYPT_OK)) {
+							PX4_INFO("Crypto AES encrypt ERROR");
+							return false;
+						}
+					}
+				}
+
+				*cipher_size = message_size;
+				ret = true;
+			}
+		}
+		break;
+
 	case CRYPTO_RSA_OAEP: {
 			rsa_key key;
 			size_t key_sz;
@@ -331,6 +380,27 @@ bool crypto_generate_key(crypto_session_handle_t handle,
 
 	switch (handle.algorithm) {
 	case CRYPTO_XCHACHA20:
+		if (key_cache[idx].key_size < 32) {
+			if (key_cache[idx].key_size > 0) {
+				SECMEM_FREE(key_cache[idx].key);
+				key_cache[idx].key_size = 0;
+			}
+
+			key_cache[idx].key = SECMEM_ALLOC(32);
+		}
+
+		if (key_cache[idx].key) {
+			key_cache[idx].key_size = 32;
+			px4_get_secure_random(key_cache[idx].key, 32);
+			ret = true;
+
+		} else {
+			key_cache[idx].key_size = 0;
+		}
+
+		break;
+
+	case CRYPTO_AES:
 		if (key_cache[idx].key_size < 32) {
 			if (key_cache[idx].key_size > 0) {
 				SECMEM_FREE(key_cache[idx].key);
@@ -441,7 +511,9 @@ size_t crypto_get_min_blocksize(crypto_session_handle_t handle, uint8_t key_idx)
 	case CRYPTO_XCHACHA20:
 		ret = 64;
 		break;
-
+	case CRYPTO_AES:
+		ret = AES_BLOCK_SIZE; 
+		break;
 	default:
 		ret = 1;
 	}

@@ -32,7 +32,7 @@
 #
 ############################################################################
 
-px4_add_library(crypto_backend crypto.c)
+px4_add_library(crypto_backend crypto.c crypto_aes.c)
 
 target_link_libraries(crypto_backend
 	PUBLIC
