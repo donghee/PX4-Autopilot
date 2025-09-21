@@ -2,7 +2,7 @@
 
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP
-from Crypto.Cipher import ChaCha20
+from Crypto.Cipher import ChaCha20, AES
 from Crypto.Hash import SHA256
 import binascii
 import argparse
@@ -25,7 +25,8 @@ if __name__ == "__main__":
 
     # Read the private RSA key to decrypt the cahcha key
     with open(args.rsa_key, 'rb') as f:
-        r = RSA.importKey(f.read(), passphrase='')
+        #  r = RSA.importKey(f.read(), passphrase='')
+        r = RSA.importKey(f.read())
 
     # Read the encrypted xchacha key and the nonce
     with open(args.ulog_key, 'rb') as f:
@@ -50,13 +51,17 @@ if __name__ == "__main__":
             print("Keyfile format error")
             sys.exit(1);
 
-    # Decrypt the xchacha key
+    # Decrypt the xchacha key or aes key
     cipher_rsa = PKCS1_OAEP.new(r,SHA256)
     ulog_key = cipher_rsa.decrypt(ulog_key_cipher)
     #print(binascii.hexlify(ulog_key))
 
     # Read and decrypt the .ulgc
-    cipher = ChaCha20.new(key=ulog_key, nonce=nonce)
+    # cipher = ChaCha20.new(key=ulog_key, nonce=nonce)
+    cipher = AES.new(key=ulog_key, mode=AES.MODE_ECB)
     with open(args.ulog_file, 'rb') as f:
         with open(args.ulog_file.rstrip(args.ulog_file[-1]), 'wb') as out:
-            out.write(cipher.decrypt(f.read()))
+            #out.write(cipher.decrypt(f.read()))
+            for chunk in iter(lambda: f.read(16), b""):
+                #  print([hex(x) for x in chunk])
+                out.write(cipher.decrypt(chunk))
