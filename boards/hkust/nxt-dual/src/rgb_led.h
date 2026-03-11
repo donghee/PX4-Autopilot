@@ -1,6 +1,7 @@
 /****************************************************************************
  *
- *   Copyright (C) 2021 PX4 Development Team. All rights reserved.
+ *   Copyright (C) 2015 PX4 Development Team. All rights reserved.
+ *   Author: David Sidrane<david_s5@nscdg.com>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,50 +32,6 @@
  *
  ****************************************************************************/
 
-/**
- * @file drv_neopixel.h
- *
- * ADC driver interface.
- *
- */
-
-#pragma once
-
-#include <stdint.h>
-#include <sys/ioctl.h>
-#include <systemlib/px4_macros.h>
-
-namespace neopixel
-{
-class NeoLEDData
-{
-public:
-	enum eRGB {
-		eB = 0,
-		eR = 1,
-		eG = 2
-	};
-
-	typedef union {
-		uint8_t  grb[3];
-		uint32_t l;
-	} led_data_t;
-
-	led_data_t  data{};
-	NeoLEDData() {data.l = 0;}
-	NeoLEDData(NeoLEDData &r) {data.l = r.data.l;}
-
-	uint8_t &R() {return data.grb[eR];};
-	uint8_t &G() {return data.grb[eG];};
-	uint8_t &B() {return data.grb[eB];};
-};
-};
-
 __BEGIN_DECLS
-
-int neopixel_init(neopixel::NeoLEDData *led_data, int number_of_packages);
-int neopixel_write(neopixel::NeoLEDData *led_data, int number_of_packages);
-int neopixel_deinit(void);
-int neopixel_write_no_dma(uint8_t r, uint8_t g, uint8_t b, uint8_t led_count);
-int neopixel_write_no_dma_rear(uint8_t r, uint8_t g, uint8_t b, uint8_t led_count);
+void rgb_led(uint8_t loc, int r, int g, int b, int freqs);
 __END_DECLS

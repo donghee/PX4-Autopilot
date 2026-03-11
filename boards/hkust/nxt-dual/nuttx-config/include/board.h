@@ -380,6 +380,13 @@
 #define GPIO_UART8_RX    GPIO_UART8_RX_1    	/* PE0 */
 #define GPIO_UART8_TX    GPIO_UART8_TX_1    	/* PE1 */
 
+/* CAN
+ *
+ * CAN1 is routed to transceiver.
+ */
+#define GPIO_CAN1_RX     GPIO_CAN1_RX_3     /* PD0  */
+#define GPIO_CAN1_TX     GPIO_CAN1_TX_3     /* PD1  */
+
 /* SPI
  *
 

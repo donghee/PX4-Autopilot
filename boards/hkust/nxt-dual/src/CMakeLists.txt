@@ -48,6 +48,7 @@ else()
 		i2c.cpp
 		init.c
 		led.c
+		rgb_led.cpp
 		sdio.c
 		spi.cpp
 		timer_config.cpp
@@ -65,5 +66,6 @@ else()
 			nuttx_arch
 			nuttx_drivers
 			px4_layer
+			platform_srgbled
 	)
 endif()

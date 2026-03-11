@@ -48,6 +48,8 @@
 #include <nuttx/board.h>
 #include <arch/board/board.h>
 
+#include "rgb_led.h"
+
 /*
  * Ideally we'd be able to get these from arm_internal.h,
  * but since we want to be able to disable the NuttX use
@@ -77,6 +79,31 @@ __EXPORT void led_init(void)
 			stm32_configgpio(g_ledmap[l]);
 		}
 	}
+
+	/* Front WS2812B RGB LED*/
+	rgb_led(0, 255, 0, 0, 0);
+	sleep(2);
+	rgb_led(0, 255, 0, 0, 0);
+	sleep(2);
+	rgb_led(0, 0, 255, 0, 0);
+	sleep(2);
+	rgb_led(0, 0, 0, 255, 0);
+	sleep(2);
+	rgb_led(0, 0, 0, 0, 0);
+	sleep(2);
+
+	/* Rear WS2812B RGB LED*/
+	rgb_led(1, 255, 0, 0, 0);
+	sleep(2);
+	rgb_led(1, 255, 0, 0, 0);
+	sleep(2);
+	rgb_led(1, 0, 255, 0, 0);
+	sleep(2);
+	rgb_led(1, 0, 0, 255, 0);
+	sleep(2);
+	rgb_led(1, 0, 0, 0, 0);
+	sleep(2);
+
 }
 
 static void phy_set_led(int led, bool state)

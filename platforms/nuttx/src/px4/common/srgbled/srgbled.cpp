@@ -72,16 +72,22 @@
 #define rDWT_CTRL        REG(DWT_CTRL)
 #define rDWT_CNT         REG(DWT_CYCCNT)
 
-#if defined(BOARD_SRGBLED_PORT) && defined(BOARD_SRGBLED_BIT)
-#  define PORT             REG(BOARD_SRGBLED_PORT)
-#  define D0               ((PORT) &= ~(1 << BOARD_SRGBLED_BIT));
-#  define D1               ((PORT) |= (1 << BOARD_SRGBLED_BIT));
+#if defined(BOARD_FRONT_SRGBLED_PORT) && defined(BOARD_FRONT_SRGBLED_BIT)
+#  define PORT             REG(BOARD_FRONT_SRGBLED_PORT)
+#  define D0               ((PORT) &= ~(1 << BOARD_FRONT_SRGBLED_BIT));
+#  define D1               ((PORT) |= (1 << BOARD_FRONT_SRGBLED_BIT));
 #elif defined(BOARD_SRGBLED_SET_PORT) && defined(BOARD_SRGBLED_CLEAR_PORT)  && defined(BOARD_SRGBLED_BIT)
 #  define PORT             REG(BOARD_SRGBLED_PORT)
 #  define D0               ((BOARD_SRGBLED_CLEAR_PORT) |= (1 << BOARD_SRGBLED_BIT));
 #  define D1               ((BOARD_SRGBLED_SET_PORT)   |= (1 << BOARD_SRGBLED_BIT));
 #else
 # error BOARD_SRGBLED_[]{SET|CLEAR}_]PORT and BOARD_SRGBLED_BIT needs to be defined.
+#endif
+
+#if defined(BOARD_REAR_SRGBLED_PORT) && defined(BOARD_REAR_SRGBLED_BIT)
+#  define REAR_PORT             REG(BOARD_REAR_SRGBLED_PORT)
+#  define REAR_D0               ((REAR_PORT) &= ~(1 << BOARD_REAR_SRGBLED_BIT));
+#  define REAR_D1               ((REAR_PORT) |= (1 << BOARD_REAR_SRGBLED_BIT));
 #endif
 
 #define DWT_DEADLINE(t)  rDWT_CNT + (t)
@@ -125,4 +131,34 @@ int neopixel_write_no_dma(uint8_t r, uint8_t g, uint8_t b, uint8_t led_count)
 	px4_leave_critical_section(state);
 	return 0;
 }
+
+int neopixel_write_no_dma_rear(uint8_t r, uint8_t g, uint8_t b, uint8_t led_count)
+{
+	neopixel::NeoLEDData::led_data_t data;
+	data.grb[2] = g;
+	data.grb[1] = r;
+	data.grb[0] = b;
+	rDEMCR    |= NVIC_DEMCR_TRCENA;
+	rDWT_CTRL |= DWT_CTRL_CYCCNTENA_MASK;
+	irqstate_t state = px4_enter_critical_section();
+
+	while (led_count--) {
+		uint32_t  deadline = DWT_DEADLINE(TW);
+
+		for (uint32_t mask = 1 << (BITS_PER_PACKAGE - 1);  mask != 0;  mask >>= 1) {
+			DWT_WAIT(deadline, TW);
+			deadline = rDWT_CNT;
+			REAR_D1;
+			DWT_WAIT(deadline, data.l & mask ? T1H : T0H);
+			REAR_D0;
+		}
+
+		DWT_WAIT(deadline, TW);
+	}
+
+	px4_leave_critical_section(state);
+	return 0;
+}
+
+
 #endif // BOARD_HAS_SRGBLED
