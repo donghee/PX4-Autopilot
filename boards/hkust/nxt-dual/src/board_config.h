@@ -170,6 +170,8 @@
 /* This board provides the board_on_reset interface */
 #define BOARD_HAS_ON_RESET 1
 
+#define UAVCAN_NUM_IFACES_RUNTIME  1
+
 #define PX4_GPIO_INIT_LIST { \
 		PX4_ADC_GPIO, \
 		GPIO_CAN1_TX, \
