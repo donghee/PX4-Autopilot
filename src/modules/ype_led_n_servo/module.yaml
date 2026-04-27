@@ -1,0 +1,23 @@
+module_name: ype_led_n_servo
+
+parameters:
+  - group: YPE
+    definitions:
+      YPE_PITCH_20DEG:
+        description:
+          short: PWM value when gimbal pitch is 20 degrees
+          long: Calibration value. Set PWM output value when YPE 1axis gimbal is physically at 20 degrees pitch.
+        type: int32
+        default: 1750
+        min: 1000
+        max: 2000
+        unit: us
+      YPE_DIAL_RATE:
+        description:
+          short: RC Dial Maximum Pitchrate in degree
+          long: RC Dial Maximum Pitchrate in degree.
+        type: float
+        default: 50.0
+        min: 10.0
+        max: 200.0
+        unit: deg/s

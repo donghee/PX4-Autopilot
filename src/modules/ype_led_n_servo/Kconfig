@@ -1,0 +1,12 @@
+menuconfig MODULES_YPE_LED_N_SERVO
+	bool "ype_led_n_servo"
+	default n
+	---help---
+		Enable support for ype_led_n_servo
+
+menuconfig USER_YPE_LED_N_SERVO
+	bool "ype_led_n_servo running as userspace module"
+	default n
+	depends on BOARD_PROTECTED && MODULES_YPE_LED_N_SERVO
+	---help---
+		Put ype_led_n_servo in userspace memory
